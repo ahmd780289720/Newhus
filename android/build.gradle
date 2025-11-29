@@ -1,17 +1,27 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.2'
-        classpath 'com.capacitorjs:capacitor-android-gradle-plugin:5.0.5'
-    }
-}
+apply plugin: 'com.android.application'
+apply plugin: 'com.capacitorjs.capacitor-android-gradle-plugin'
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
+android {
+    namespace "com.nizam.securitysystem"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.nizam.securitysystem"
+        minSdk 22
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
     }
 }
