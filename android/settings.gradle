@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-include ':app'
-apply from: '../capacitor.settings.gradle'
+rootProject.name = "Newhus"
+include ":app"
