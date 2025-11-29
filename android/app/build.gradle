@@ -1,43 +1,47 @@
-plugins {
-    id 'com.android.application'
-    id 'com.capacitorjs.capacitor-android-gradle-plugin'
-}
+apply plugin: 'com.android.application'
 
 android {
-    namespace "com.nizam.security"
-    compileSdk 35
+    namespace "com.nizam.securitysystem"
+
+    compileSdkVersion 35
 
     defaultConfig {
-        applicationId "com.nizam.security"
-        minSdk 22
-        targetSdk 35
+        applicationId "com.nizam.securitysystem"
+        minSdkVersion 22
+        targetSdkVersion 35
         versionCode 1
         versionName "1.0"
-    }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                    'proguard-rules.pro'
         }
+    }
+
+    // مهم جداً: نستخدم جافا 17 عشان غريدل 8 و AGP 8
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
+    // مشروع كاباسيتور الأساسي
     implementation project(':capacitor-android')
 
+    // بعض مكتبات أندرويد الأساسية (آمنة لو تركتها)
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
-    implementation 'androidx.core:core-ktx:1.13.1'
-    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
-    implementation 'androidx.browser:browser:1.7.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
+
+// هذا ملف كاباسيتور القديم، نخليه مثل ما هو
+apply from: 'capacitor.build.gradle'
