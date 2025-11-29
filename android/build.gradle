@@ -9,11 +9,15 @@ buildscript {
     }
 }
 
-apply plugin: 'com.android.application'
-
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
+}
+
+ext {
+    compileSdkVersion = 35
+    targetSdkVersion = 35
+    minSdkVersion = 23
 }
