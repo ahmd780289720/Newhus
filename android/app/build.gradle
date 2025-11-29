@@ -1,8 +1,7 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.getcapacitor.plugin'
 
 android {
-    namespace "com.newhus.app"
     compileSdkVersion 34
 
     defaultConfig {
@@ -11,16 +10,6 @@ android {
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
-        multiDexEnabled true
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
     }
 
     buildTypes {
@@ -29,14 +18,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':capacitor-android')
     implementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-filesystem')
-
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
 }
