@@ -1,27 +1,9 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        // Android Gradle Plugin
-        classpath 'com.android.tools.build:gradle:8.1.2'
-
-        // Capacitor Android Gradle plugin
-        classpath 'com.capacitorjs:capacitor-android-gradle-plugin:5.0.5'
-
-        // Kotlin (لو ما تحتاجه ما يضر وجوده)
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
-    }
+plugins {
+    id 'com.android.application' version '8.1.2' apply false
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+// ما نضيف أي repositories هنا عشان ما يتعارض مع settings.gradle
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }
