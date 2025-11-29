@@ -1,5 +1,7 @@
-apply plugin: 'com.android.application'
-apply plugin: 'com.capacitorjs.capacitor-android-gradle-plugin'
+plugins {
+    id 'com.android.application'
+    id 'com.capacitorjs.capacitor-android-gradle-plugin'
+}
 
 android {
     namespace "com.nizam.securitysystem"
