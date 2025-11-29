@@ -1,16 +1,14 @@
-plugins {
-    id 'com.android.application'
-    id 'com.capacitorjs.capacitor-android-gradle-plugin'
-}
+apply plugin: 'com.android.application'
+apply plugin: 'com.capacitorjs.capacitor-android'
 
 android {
-    namespace "com.nizam.securitysystem"
-    compileSdk 35
+    namespace "com.nizam.securitysystem"   // نفس اللي بالصورة
+    compileSdkVersion 35
 
     defaultConfig {
         applicationId "com.nizam.securitysystem"
-        minSdk 22
-        targetSdk 35
+        minSdkVersion 22
+        targetSdkVersion 35
         versionCode 1
         versionName "1.0"
     }
@@ -26,4 +24,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+dependencies {
+    implementation project(':capacitor-android')
 }
