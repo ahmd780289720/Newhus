@@ -1,40 +1,39 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 android {
     namespace "com.nizam.securitysystem"
-
-    compileSdkVersion 35
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.nizam.securitysystem"
-        minSdkVersion 22
-        targetSdkVersion 35
+        minSdk 22
+        targetSdk 35
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
-                    'proguard-rules.pro'
+            proguardFiles(
+                getDefaultProguardFile('proguard-android-optimize.txt'),
+                'proguard-rules.pro'
+            )
         }
-    }
-
-    // مهم جداً: نستخدم جافا 17 عشان غريدل 8 و AGP 8
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 dependencies {
-    // مشروع كاباسيتور الأساسي
     implementation project(':capacitor-android')
 
-    // بعض مكتبات أندرويد الأساسية (آمنة لو تركتها)
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
 
@@ -42,6 +41,3 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
-
-// هذا ملف كاباسيتور القديم، نخليه مثل ما هو
-apply from: 'capacitor.build.gradle'
