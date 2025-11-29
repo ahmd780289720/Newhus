@@ -1,19 +1,19 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'com.capacitorjs.capacitor-android-gradle-plugin'
+    id 'com.capacitorjs.capacitor-android'
 }
 
 android {
-    namespace "com.newhus.app"
+    namespace "com.nizam_al_shuba.security_system"
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.newhus.app"
-        minSdk 22
+        applicationId "com.nizam_al_shuba.security_system"
+        minSdk 23
         targetSdk 34
         versionCode 1
-        versionName "1.0"
+        versionName "0.0.0"
     }
 
     compileOptions {
@@ -22,16 +22,6 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = '17'
     }
 }
-
-dependencies {
-    implementation fileTree(dir: "libs", include: ["*.jar"])
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.22"
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
-}
-
-apply from: "../../node_modules/@capacitor/android/capacitor.build.gradle"
