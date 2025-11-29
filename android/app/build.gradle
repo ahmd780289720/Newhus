@@ -1,43 +1,28 @@
-plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.2'
+        classpath 'com.capacitorjs:capacitor-android-gradle-plugin:5.0.5'
+    }
 }
 
+apply plugin: 'com.android.application'
+apply plugin: 'com.capacitorjs.capacitor-android-gradle-plugin'
+
 android {
-    namespace "com.newhus.app"
-    compileSdk 34
+    namespace "com.nizam.securitysystem"
+    compileSdk 35
 
     defaultConfig {
-        applicationId "com.newhus.app"
         minSdk 22
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile(
-                "proguard-android-optimize.txt"
-            ), "proguard-rules.pro"
-        }
+        targetSdk 35
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-}
-
-dependencies {
-    implementation project(':capacitor-android')
-    implementation project(':capacitor-cordova-android-plugins')
-
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.11.0'
 }

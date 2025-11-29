@@ -1,14 +1,11 @@
 buildscript {
-    ext.kotlin_version = '1.8.22'
-
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.capacitorjs:capacitor-android-gradle-plugin:5.0.5'
     }
 }
 
@@ -17,8 +14,4 @@ allprojects {
         google()
         mavenCentral()
     }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
+}}
