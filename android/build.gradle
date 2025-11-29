@@ -5,7 +5,14 @@ buildscript {
     }
 
     dependencies {
+        // Android Gradle Plugin فقط، بدون أي Capacitor Gradle plugin
         classpath 'com.android.tools.build:gradle:8.1.2'
-        classpath 'com.capacitorjs:capacitor-android-gradle-plugin:5.0.5'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
     }
 }
