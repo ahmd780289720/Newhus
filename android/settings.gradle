@@ -1,7 +1,5 @@
-rootProject.name = "Newhus"
-
 include ':app'
-include ':capacitor-android'
+include ':capacitor-cordova-android-plugins'
+project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 
-// انتبه للمسار حسب مشروعك، في كاباسيتور العادة كذا:
-project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')
+apply from: 'capacitor.settings.gradle'
