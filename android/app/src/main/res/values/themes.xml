@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- الثيم الرئيسي (تقدر تغيّر اسمه لو حابب) -->
+    <style name="Theme.Newhus" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+    <!-- الثيم المطلوب في الخطأ: Theme.SplashScreen -->
+    <style name="Theme.SplashScreen" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+
+</resources>
