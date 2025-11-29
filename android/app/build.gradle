@@ -1,42 +1,22 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'capacitor.android'
 }
 
 android {
-    // عدّل هذه للسبيس نيم/الباكيج حقك لو تحب، أو خله مؤقتاً
-    namespace "com.example.newhus"
-
-    compileSdkVersion 34
+    namespace "com.newhus.app"
+    compileSdk 34
 
     defaultConfig {
-        // عدّل هذه لـ applicationId القديم لو تعرفه، أو خله مؤقتاً
-        applicationId "com.example.newhus"
-
-        minSdkVersion 22
-        targetSdkVersion 34
-
+        applicationId "com.newhus.app"
+        minSdk 22
+        targetSdk 34
         versionCode 1
         versionName "1.0"
-
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles(
-                    getDefaultProguardFile('proguard-android-optimize.txt'),
-                    'proguard-rules.pro'
-            )
-        }
-        debug {
-            // تقدر تضيف إعدادات خاصة بالديبق لو حبيت
-        }
     }
 
     compileOptions {
-        // نخلي الجافا على 17 عشان يناسب GitHub Actions
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -48,21 +28,14 @@ android {
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
-
-    // كوتلن
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22"
-
-    // أساسيات أندرويد إكس (لو مشروعك ما يستخدم UI عادي برضو ما تضر)
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-
-    // اختبارات (اختياري)
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
-// هذا الضروري عشان Capacitor (بدل البلجن اللي كان يعطي خطأ)
 apply from: "../../node_modules/@capacitor/android/capacitor.build.gradle"
