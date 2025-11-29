@@ -1,19 +1,19 @@
 plugins {
     id 'com.android.application'
+    id 'com.capacitor.application'
     id 'org.jetbrains.kotlin.android'
-    id 'com.capacitorjs.capacitor-android'
 }
 
 android {
-    namespace "com.nizam_al_shuba.security_system"
+    namespace "com.newhus.app"
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.nizam_al_shuba.security_system"
-        minSdk 23
+        applicationId "com.newhus.app"
+        minSdk 22
         targetSdk 34
         versionCode 1
-        versionName "0.0.0"
+        versionName "1.0"
     }
 
     compileOptions {
@@ -24,4 +24,10 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-community-sqlite')
+    implementation project(':capacitor-filesystem')
 }
