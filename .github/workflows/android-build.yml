@@ -39,10 +39,6 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
-      - name: Add release keystore
-        run: |
-          cp android/newhus.jks android/app/newhus.jks
-
       - name: Build Release APK
         run: |
           cd android
