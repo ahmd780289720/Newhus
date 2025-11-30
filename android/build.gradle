@@ -1,23 +1,9 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        // Android Gradle Plugin
-        classpath 'com.android.tools.build:gradle:8.1.0'
-
-        // Kotlin Gradle Plugin (لبعض بلجنات كاباسيتور المكتوبة بكوتلن)
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
-    }
+plugins {
+    id 'com.android.application' version '8.1.0' apply false
+    id 'com.android.library'    version '8.1.0' apply false
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+apply from: "variables.gradle"
 
 tasks.register("clean", Delete) {
     delete(rootProject.buildDir)
