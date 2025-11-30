@@ -7,14 +7,15 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // بدل FAIL_ON_PROJECT_REPOS
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
     }
 }
 
-rootProject.name = "android"   // الاسم مو مهم كثير، خله زي ما تحب
+rootProject.name = "Newhus"
 
 include ':app'
 include ':capacitor-android'
