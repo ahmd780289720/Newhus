@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Lock, User, HelpCircle } from "lucide-react";
 import { useSecurity } from "../context/SecurityContext";
-import logo from "../assets/logo.png";
-import "../index.css";    
+import logo from "../src/assets/logo.png";
+import "../src/index.css";
 const LoginScreen: React.FC = () => {
   const { login } = useSecurity();
   const [name, setName] = useState("");
