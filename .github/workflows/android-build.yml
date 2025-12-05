@@ -39,6 +39,12 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      # 👇 هنا نسترجع ملف newhus.jks من الـ Secret
+      - name: Restore keystore
+        run: |
+          mkdir -p android/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/newhus.jks
+
       - name: Build Release APK
         run: |
           cd android
