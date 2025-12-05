@@ -14,6 +14,7 @@ import {
   UserRole,
   Department,
   FavoriteItem,
+  Visit,              // 👈 جديد
 } from '../types';
 import { SQLiteService, CollectionKey } from '../src/database/SQLiteService';
 
@@ -35,6 +36,7 @@ interface SecurityContextType {
   minutes: InvestigationMinute[];
   wantedPersons: WantedPerson[];
   movements: Movement[];
+  visits: Visit[];   
   reports: BehaviorReport[];
   auditLogs: AuditLog[];
   departments: Department[];
@@ -60,6 +62,10 @@ interface SecurityContextType {
 
   addMovement: (movement: Movement) => void;
   updateMovement: (movement: Movement) => void;
+
+addVisit: (visit: Visit) => void;        // 👈 جديد
+  updateVisit: (visit: Visit) => void;     // 👈 جديد
+  deleteVisit: (id: string) => void;       // 👈 جديد
 
   // Favorites
   addFavorite: (item: FavoriteItem) => void;
@@ -157,6 +163,9 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [movements, setMovements] = useState<Movement[]>(() =>
     loadFromStorage('sec_sys_movements', []),
   );
+const [visits, setVisits] = useState<Visit[]>(() =>
+    loadFromStorage('sec_sys_visits', []),   // 👈 جديد
+  );
   const [reports, setReports] = useState<BehaviorReport[]>(() =>
     loadFromStorage('sec_sys_reports', []),
   );
@@ -173,10 +182,12 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => saveToStorage('sec_sys_minutes', minutes), [minutes]);
   useEffect(() => saveToStorage('sec_sys_wanted', wantedPersons), [wantedPersons]);
   useEffect(() => saveToStorage('sec_sys_movements', movements), [movements]);
+  useEffect(() => saveToStorage('sec_sys_visits', visits), [visits]);   // 👈 جديد
   useEffect(() => saveToStorage('sec_sys_reports', reports), [reports]);
   useEffect(() => saveToStorage('sec_sys_users_list', users), [users]);
   useEffect(() => saveToStorage('sec_sys_logs', auditLogs), [auditLogs]);
   useEffect(() => saveToStorage('sec_sys_favorites', favorites), [favorites]);
+
 
   useEffect(() => {
     if (currentUser) localStorage.setItem('sec_sys_user', JSON.stringify(currentUser));
@@ -381,6 +392,36 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
     logAction('UPDATE', `تعديل حركة للنزيل رقم: ${movement.inmateId}`);
   };
 
+const addVisit = (visit: Visit) => {
+    setVisits((prev) => {
+      const updated = [...prev, visit];
+      saveToStorage('sec_sys_visits', updated);
+      return updated;
+    });
+    logAction('CREATE', `تسجيل زيارة للنزيل: ${visit.inmateName}`);
+  };
+
+  const updateVisit = (visit: Visit) => {
+    setVisits((prev) => {
+      const updated = prev.map((v) => (v.id === visit.id ? visit : v));
+      saveToStorage('sec_sys_visits', updated);
+      return updated;
+    });
+    logAction('UPDATE', `تعديل زيارة للنزيل: ${visit.inmateName}`);
+  };
+
+  const deleteVisit = (id: string) => {
+    setVisits((prev) => {
+      const visit = prev.find((v) => v.id === id);
+      const updated = prev.filter((v) => v.id !== id);
+      saveToStorage('sec_sys_visits', updated);
+      if (visit) {
+        logAction('DELETE', `حذف زيارة للنزيل: ${visit.inmateName}`);
+      }
+      return updated;
+    });
+  };
+
   const addFavorite = (item: FavoriteItem) => {
     setFavorites((prev) => {
       const updated = [...prev, item];
@@ -562,6 +603,7 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
         minutes,
         wantedPersons,
         movements,
+         visits,              // 👈 جديد
         reports,
         auditLogs,
         favorites,
@@ -584,6 +626,9 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
         deleteWantedPerson,
         addMovement,
         updateMovement,
+        addVisit,            // 👈 جديد
+        updateVisit,         // 👈 جديد
+        deleteVisit,         // 👈 جديد
         addFavorite,
         removeFavorite,
         createBackup,

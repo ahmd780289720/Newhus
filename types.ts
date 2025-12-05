@@ -1,4 +1,3 @@
-
 export enum UserRole {
   ADMIN = 'مدير الشعبة',
   OFFICER = 'ضابط',
@@ -194,6 +193,28 @@ export interface Movement {
   checkInTime?: string;
   officerName: string;
   isCompleted: boolean;
+}
+
+// --- 9. Visits ---
+export type VisitStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+
+export interface Visit {
+  id: string;
+  inmateId: string;
+  inmateName: string;
+
+  visitorName: string;
+  visitorIdNumber?: string;  // رقم هوية الزائر (اختياري)
+  relation?: string;         // صلة القرابة
+
+  visitDate: string;         // yyyy-MM-dd
+  visitTime: string;         // HH:mm
+  durationMinutes?: number;
+
+  status: VisitStatus;
+  notes?: string;
+
+  createdAt: string;         // وقت تسجيل الزيارة في النظام
 }
 
 // --- 8. Behavior Reports ---

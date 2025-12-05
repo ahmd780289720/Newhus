@@ -11,6 +11,7 @@ export type CollectionKey =
   | 'sec_sys_minutes'
   | 'sec_sys_wanted'
   | 'sec_sys_movements'
+  | 'sec_sys_visits'      // 👈 جديد
   | 'sec_sys_reports'
   | 'sec_sys_favorites';
 

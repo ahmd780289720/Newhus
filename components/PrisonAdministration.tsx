@@ -1,13 +1,35 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Users, UserPlus, Scan, Building, 
-  Shield, HelpCircle, Camera, AlertOctagon, 
-  LayoutDashboard, Plus, Save, ArrowLeft, CheckCircle, Layout, ClipboardList, X, Briefcase, FileBadge
+import {
+  Users,
+  UserPlus,
+  Scan,
+  Building,
+  Shield,
+  HelpCircle,
+  Camera,
+  AlertOctagon,
+  LayoutDashboard,
+  Plus,
+  Save,
+  ArrowLeft,
+  CheckCircle,
+  Layout,
+  ClipboardList,
+  X,
+  Briefcase,
+  FileBadge,
 } from 'lucide-react';
-import { InmateStatus, Inmate, InspectionRecord, Ward } from '../types';
+
+import {
+  InmateStatus,
+  Inmate,
+  InspectionRecord,
+  Ward,
+} from '../types';
+
 import { useSecurity } from '../context/SecurityContext';
 import MovementsManager from './MovementsManager';
+import VisitManager from './VisitManager';
 import InmateManager from './InmateManager';
 
 interface PrisonAdministrationProps {
@@ -15,152 +37,301 @@ interface PrisonAdministrationProps {
   initialTab?: string;
 }
 
-const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({ onShowProfile, initialTab }) => {
-  const { inmates, wards, assignWard, addInmate, addInspection, addWard } = useSecurity();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [currentView, setCurrentView] = useState<string>('NEW_INMATE');
+const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
+  onShowProfile,
+  initialTab,
+}) => {
+  const {
+    inmates,
+    wards,
+    assignWard,
+    addInmate,
+    addInspection,
+    addWard,
+    updateInmateStatus,
+  } = useSecurity();
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [currentView, setCurrentView] = useState<string>('NEW_INMATE');
   useEffect(() => {
     if (initialTab) setCurrentView(initialTab);
   }, [initialTab]);
+// مضبوطات
+const [newItemType, setNewItemType] = useState("");
+const [newItemData, setNewItemData] = useState({});
+// هذه لتخزين المضبوطات كلها
+const [belongingsList, setBelongingsList] = useState<any[]>([]);
+  // =======================
+  //      STATES
+  // =======================
 
-  // --- STATES ---
-  const [wardForm, setWardForm] = useState({ name: '', capacity: 20, supervisor: '' });
+  const [wardForm, setWardForm] = useState({
+    name: '',
+    capacity: 20,
+    supervisor: '',
+  });
+
+  const todayDefault = new Date().toISOString().split('T')[0];
+  const nowDefault = new Date().toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
   const [intakeForm, setIntakeForm] = useState<Partial<Inmate>>({
-    type: 'SUSPECT',
+    type: 'SUSPECT' as any,
     fullName: '',
-    documentType: 'ID',
+    documentType: 'ID' as any,
     nationalId: '',
-    entryDate: new Date().toISOString().split('T')[0],
-    entryTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    entryDate: todayDefault,
+    entryTime: nowDefault,
     governorate: '',
     village: '',
     residence: '',
     referringAuthority: 'الشرطة العسكرية',
     primaryCharge: '',
-    chargeType: 'Regular',
-    maritalStatus: 'Single',
+    chargeType: 'Regular' as any,
+    maritalStatus: 'Single' as any,
     childrenBoys: undefined,
     childrenGirls: undefined,
-    educationLevel: 'HighSchool',
+    educationLevel: 'HighSchool' as any,
     specialization: '',
-    unit: '', 
-    front: '', 
-    capturePlace: '', 
-    workStatus: 'Unemployed', 
-    jobTitle: '', 
-    employer: '', 
-    wardId: ''
+    unit: '',
+    front: '',
+    capturePlace: '',
+    workStatus: 'Unemployed' as any,
+    jobTitle: '',
+    employer: '',
+    wardId: '',
   });
+
   const [inmateImage, setInmateImage] = useState<string | null>(null);
 
-  const [selectedInmateForInspection, setSelectedInmateForInspection] = useState<string | null>(null);
-  const [inspectionForm, setInspectionForm] = useState<Partial<InspectionRecord>>({
-    isPhysicallyInspected: 'No',
-    physicalNotes: '',
-    belongings: [],
-    securityIntel: '',
-    documents: []
+  const [selectedInmateForInspection, setSelectedInmateForInspection] =
+    useState<string | null>(null);
+
+  const [inspectionForm, setInspectionForm] =
+    useState<Partial<InspectionRecord>>({
+      isPhysicallyInspected: 'No' as any,
+      physicalNotes: '',
+      belongings: [],
+      securityIntel: '',
+      documents: [],
+    });
+
+  // اختيار العنبر من شاشة التفتيش (اختياري)
+  const [inspectionWardId, setInspectionWardId] = useState<string>('');
+
+  // شاشة التسكين
+  const [selectedInmateForHousing, setSelectedInmateForHousing] =
+    useState<string | null>(null);
+  const [selectedWardId, setSelectedWardId] = useState<string>('');
+
+// =======================
+//      ACTIONS
+// =======================
+
+// إضافة عنبر جديد
+const handleAddWard = (e: React.FormEvent) => {
+  e.preventDefault();
+  const newWard: Ward = {
+    id: `W${Date.now()}`,
+    name: wardForm.name,
+    capacity: Number(wardForm.capacity),
+    currentCount: 0,
+    supervisor: wardForm.supervisor,
+  };
+  addWard(newWard);
+  alert("تم إضافة العنبر بنجاح!");
+  setWardForm({ name: "", capacity: 20, supervisor: "" });
+};
+
+// رفع صورة النزيل
+const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+    const file = e.target.files[0];
+    const imageUrl = URL.createObjectURL(file);
+    setInmateImage(imageUrl);
+  }
+};
+const addBelongingItem = () => {
+  if (!newItemType) {
+    alert("اختر نوع المضبوطة أولاً");
+    return;
+  }
+
+  if (Object.keys(newItemData).length === 0) {
+    alert("أدخل بيانات المضبوطة");
+    return;
+  }
+
+  const newItem = {
+    id: Math.random().toString(36).substring(2, 9),
+    type: newItemType,
+    data: newItemData,
+  };
+
+  const updated = [...(inspectionForm.belongings || []), newItem];
+
+  setInspectionForm({ ...inspectionForm, belongings: updated });
+
+  setNewItemData({});
+  setNewItemType("");
+};
+
+// حذف غرض من المضبوطات
+const removeBelongingItem = (id: string) => {
+  setBelongingsList(belongingsList.filter((b) => b.id !== id));
+};
+
+// حفظ بيانات النزيل
+const handleIntakeSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const newId = Math.random().toString(36).substring(2, 9);
+  const today = new Date().toISOString().split("T")[0];
+  const now = new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
-  const [selectedInmateForHousing, setSelectedInmateForHousing] = useState<string | null>(null);
-
-  // --- ACTIONS ---
-
-  const handleAddWard = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newWard: Ward = {
-      id: `W${Date.now()}`,
-      name: wardForm.name,
-      capacity: Number(wardForm.capacity),
-      currentCount: 0,
-      supervisor: wardForm.supervisor
-    };
-    addWard(newWard);
-    alert('تم إضافة العنبر بنجاح!');
-    setWardForm({ name: '', capacity: 20, supervisor: '' });
+  const newInmate: Inmate = {
+    ...(intakeForm as Inmate),
+    id: newId,
+    fullName: intakeForm.fullName || "",
+    nationalId: intakeForm.nationalId || "",
+    type: intakeForm.type || "SUSPECT",
+    entryDate: intakeForm.entryDate || today,
+    entryTime: intakeForm.entryTime || now,
+    photoUrl: inmateImage || "https://via.placeholder.com/150",
+    status: InmateStatus.PROCESSING,
+    referringAuthority: intakeForm.referringAuthority || "",
+    primaryCharge: intakeForm.primaryCharge || "",
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
-      setInmateImage(imageUrl);
-    }
+  addInmate(newInmate);
+
+  alert("تم تسجيل النزيل بنجاح!");
+
+  // تصفير النموذج
+  setIntakeForm({
+    type: "SUSPECT" as any,
+    fullName: "",
+    documentType: "ID" as any,
+    nationalId: "",
+    referringAuthority: "الشرطة العسكرية",
+    primaryCharge: "",
+    maritalStatus: "Single" as any,
+    educationLevel: "HighSchool" as any,
+    workStatus: "Unemployed" as any,
+    entryDate: today,
+    entryTime: now,
+    childrenBoys: undefined,
+    childrenGirls: undefined,
+    unit: "",
+    front: "",
+    capturePlace: "",
+    residence: "",
+    governorate: "",
+    village: "",
+    wardId: "",
+  });
+
+  setInmateImage(null);
+
+  // الانتقال للفحص
+  setCurrentView("INSPECTION");
+  setSelectedInmateForInspection(newId);
+  setInspectionWardId("");
+};
+
+// اعتماد الفحص
+const handleInspectionSubmit = () => {
+  if (!selectedInmateForInspection) return;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const record: InspectionRecord = {
+    id: Math.random().toString(36).substring(2, 9),
+    inmateId: selectedInmateForInspection,
+    officerName: "مسؤول التفتيش",
+    date: today,
+    isPhysicallyInspected: inspectionForm.isPhysicallyInspected || "No",
+    physicalNotes: inspectionForm.physicalNotes || "",
+    isBelongingsInspected: "Yes",
+    belongings: belongingsList, // ← هنا نستخدم جميع المضبوطات
+    isDocsInspected: "Yes",
+    documents: inspectionForm.documents || [],
+    initialIntel: "وارد من الاستلام",
+    securityIntel: inspectionForm.securityIntel || "",
   };
 
-  const handleIntakeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newId = Math.random().toString(36).substr(2, 9);
-    
-    const newInmate: Inmate = {
-      id: newId,
-      fullName: intakeForm.fullName || '',
-      nationalId: intakeForm.nationalId || '',
-      type: intakeForm.type,
-      entryDate: intakeForm.entryDate || new Date().toISOString().split('T')[0],
-      entryTime: intakeForm.entryTime,
-      photoUrl: inmateImage || 'https://via.placeholder.com/150',
-      status: InmateStatus.PROCESSING,
-      referringAuthority: intakeForm.referringAuthority || '',
-      primaryCharge: intakeForm.primaryCharge || '',
-      ...intakeForm
-    } as Inmate;
+  addInspection(record);
 
-    addInmate(newInmate);
-    alert('تم تسجيل النزيل بنجاح!');
-    
-    setIntakeForm({ 
-      type: 'SUSPECT', fullName: '', nationalId: '', referringAuthority: 'الشرطة العسكرية', primaryCharge: '', 
-      documentType: 'ID', maritalStatus: 'Single', educationLevel: 'HighSchool', workStatus: 'Unemployed',
-      entryDate: new Date().toISOString().split('T')[0],
-      entryTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      childrenBoys: undefined, childrenGirls: undefined, unit: '', front: '', capturePlace: '', residence: '', governorate: '', village: ''
-    });
-    setInmateImage(null);
+  if (inspectionWardId) {
+    // تسكين مباشر
+    assignWard(selectedInmateForInspection, inspectionWardId);
+    updateInmateStatus(
+      selectedInmateForInspection,
+      InmateStatus.DETAINED
+    );
+    alert("تم اعتماد الفحص وتسكين النزيل في العنبر المختار.");
+  } else {
+    // قائمة انتظار التسكين
+    updateInmateStatus(
+      selectedInmateForInspection,
+      InmateStatus.READY_FOR_HOUSING
+    );
+    alert("تم اعتماد الفحص. النزيل الآن في قائمة الانتظار للتسكين.");
+  }
 
-    setCurrentView('INSPECTION');
-    setSelectedInmateForInspection(newId);
-  };
+  // تصفير كل شيء
+  setSelectedInmateForInspection(null);
+  setInspectionForm({
+    isPhysicallyInspected: "No" as any,
+    physicalNotes: "",
+    belongings: [],
+    securityIntel: "",
+    documents: [],
+  });
+  setBelongingsList([]); // تفريغ المضبوطات
+  setInspectionWardId("");
 
-  const handleInspectionSubmit = () => {
-    if (!selectedInmateForInspection) return;
-    const record: InspectionRecord = {
-      id: Math.random().toString(36).substr(2, 9),
-      inmateId: selectedInmateForInspection,
-      officerName: 'مسؤول التفتيش',
-      date: new Date().toISOString().split('T')[0],
-      isPhysicallyInspected: inspectionForm.isPhysicallyInspected as any || 'No',
-      physicalNotes: inspectionForm.physicalNotes || '',
-      isBelongingsInspected: 'Yes',
-      belongings: inspectionForm.belongings || [],
-      isDocsInspected: 'Yes',
-      documents: inspectionForm.documents || [],
-      initialIntel: 'وارد من الاستلام',
-      securityIntel: inspectionForm.securityIntel || '',
-    };
+  // الذهاب للتسكين
+  setCurrentView("HOUSING");
+};
 
-    addInspection(record);
-    alert('تم اعتماد الفحص. النزيل الآن في قائمة الانتظار للتسكين.');
-    setSelectedInmateForInspection(null);
-    setInspectionForm({ isPhysicallyInspected: 'No', physicalNotes: '', belongings: [], securityIntel: '', documents: [] });
-    setCurrentView('HOUSING');
-  };
+// تسكين من شاشة التسكين
+const handleAssignWardFromHousing = () => {
+  if (!selectedInmateForHousing || !selectedWardId) {
+    alert("اختر النزيل والعنبر أولاً");
+    return;
+  }
 
-  const handleAssignWard = (wardId: string) => {
-    if (selectedInmateForHousing && wardId) {
-       const ward = wards.find(w => w.id === wardId);
-       if(ward && ward.currentCount >= ward.capacity) {
-         if(!confirm('هذا العنبر ممتلئ بالفعل! هل أنت متأكد من التسكين فوق الطاقة الاستيعابية؟')) return;
-       }
-       assignWard(selectedInmateForHousing, wardId);
-       setSelectedInmateForHousing(null);
-    }
-  };
+  const ward = wards.find((w) => w.id === selectedWardId);
+  if (ward && ward.currentCount >= ward.capacity) {
+    const ok = window.confirm(
+      "هذا العنبر ممتلئ! هل تريد التسكين فوق السعة؟"
+    );
+    if (!ok) return;
+  }
 
-  // --- VIEWS ---
+  assignWard(selectedInmateForHousing, selectedWardId);
+  updateInmateStatus(
+    selectedInmateForHousing,
+    InmateStatus.DETAINED
+  );
+  alert("تم تسكين النزيل بنجاح!");
+
+  setSelectedInmateForHousing(null);
+  setSelectedWardId("");
+};
+
+
+
+  // =======================
+  //        VIEWS
+  // =======================
 
   const renderWardSetup = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
@@ -170,21 +341,58 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({ onShowProfi
         </h3>
         <form onSubmit={handleAddWard} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-slate-600 mb-2">اسم العنبر / الجناح</label>
-            <input required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold" placeholder="مثال: عنبر 5 (أحداث)" value={wardForm.name} onChange={e => setWardForm({...wardForm, name: e.target.value})} />
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              اسم العنبر / الجناح
+            </label>
+            <input
+              required
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
+              placeholder="مثال: عنبر 5 (أحداث)"
+              value={wardForm.name}
+              onChange={(e) => setWardForm({ ...wardForm, name: e.target.value })}
+            />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">السعة الاستيعابية</label>
-              <input type="number" required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold" value={wardForm.capacity} onChange={e => setWardForm({...wardForm, capacity: Number(e.target.value)})} />
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                السعة الاستيعابية
+              </label>
+              <input
+                type="number"
+                required
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
+                value={wardForm.capacity}
+                onChange={(e) =>
+                  setWardForm({
+                    ...wardForm,
+                    capacity: Number(e.target.value),
+                  })
+                }
+              />
             </div>
+
             <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">المشرف المسؤول</label>
-              <input required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold" placeholder="الرقيب..." value={wardForm.supervisor} onChange={e => setWardForm({...wardForm, supervisor: e.target.value})} />
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                المشرف المسؤول
+              </label>
+              <input
+                required
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
+                placeholder="الرقيب..."
+                value={wardForm.supervisor}
+                onChange={(e) =>
+                  setWardForm({ ...wardForm, supervisor: e.target.value })
+                }
+              />
             </div>
           </div>
-          <button type="submit" className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold mt-4 hover:bg-slate-800 transition-colors shadow-lg">
-            <Save size={18} className="inline ml-2"/> حفظ العنبر في النظام
+
+          <button
+            type="submit"
+            className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold mt-4 hover:bg-slate-800 transition-colors shadow-lg"
+          >
+            <Save size={18} className="inline ml-2" /> حفظ العنبر في النظام
           </button>
         </form>
       </div>
@@ -194,14 +402,21 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({ onShowProfi
           <Layout className="text-emerald-600" /> سجل العنابر الحالي
         </h3>
         <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-          {wards.map(ward => (
-            <div key={ward.id} className="p-4 border border-slate-100 rounded-2xl flex justify-between items-center hover:shadow-md transition-shadow">
+          {wards.map((ward) => (
+            <div
+              key={ward.id}
+              className="p-4 border border-slate-100 rounded-2xl flex justify-between items-center hover:shadow-md transition-shadow"
+            >
               <div>
                 <p className="font-bold text-slate-800">{ward.name}</p>
-                <p className="text-xs text-slate-500 mt-1">المشرف: {ward.supervisor}</p>
+                <p className="text-xs text-slate-500 mt-1">
+                  المشرف: {ward.supervisor}
+                </p>
               </div>
               <div className="text-center bg-slate-50 p-2 rounded-xl">
-                <span className="block text-lg font-extrabold text-primary-600">{ward.capacity}</span>
+                <span className="block text-lg font-extrabold text-primary-600">
+                  {ward.capacity}
+                </span>
                 <span className="text-[10px] text-slate-400 font-bold">سعة</span>
               </div>
             </div>
@@ -211,526 +426,1272 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({ onShowProfi
     </div>
   );
 
-  const renderNewInmate = () => (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 max-w-5xl mx-auto animate-fadeIn mb-20">
-      <div className="border-b border-slate-100 pb-6 mb-8 flex justify-between items-end">
-        <div>
-          <h3 className="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
-            <div className="bg-primary-100 p-3 rounded-2xl text-primary-600"><UserPlus size={32} /></div>
-            استمارة تسجيل نزيل
-          </h3>
-          <p className="text-slate-500 mt-2 mr-16">يرجى اختيار نوع النزيل بدقة لتعبئة البيانات المطلوبة</p>
+// ===============================
+//  شاشة تسجيل بيانات النزيل
+//  (نفس التصميم الأصلي كامل + إضافة مكان القبض + صور الوثيقة)
+// ===============================
+const renderNewInmate = () => (
+  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 max-w-5xl mx-auto animate-fadeIn mb-20">
+    <div className="border-b border-slate-100 pb-6 mb-8 flex justify-between items-end">
+      <div>
+        <h3 className="text-2xl font-extrabold text-slate-800 flex items-center gap-3">
+          <div className="bg-primary-100 p-3 rounded-2xl text-primary-600">
+            <UserPlus size={32} />
+          </div>
+          استمارة تسجيل نزيل
+        </h3>
+        <p className="text-slate-500 mt-2 mr-16">
+          يرجى اختيار نوع النزيل بدقة لتعبئة البيانات المطلوبة
+        </p>
+      </div>
+
+      {/* صورة النزيل */}
+      <div className="flex flex-col items-center">
+        <div
+          className="relative group cursor-pointer"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden hover:border-primary-500 transition-colors">
+            {inmateImage ? (
+              <img
+                src={inmateImage}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Camera
+                className="text-slate-400 group-hover:text-primary-500"
+                size={32}
+              />
+            )}
+          </div>
+          <div className="absolute -bottom-2 -right-2 bg-primary-600 text-white p-1.5 rounded-full shadow-md">
+            <Plus size={14} />
+          </div>
         </div>
-        
-        <div className="flex flex-col items-center">
-          <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-            <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden hover:border-primary-500 transition-colors">
-              {inmateImage ? (
-                <img src={inmateImage} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <Camera className="text-slate-400 group-hover:text-primary-500" size={32} />
+        <span className="text-xs text-slate-500 mt-2 font-bold">
+          صورة النزيل
+        </span>
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/*"
+          onChange={handleImageUpload}
+        />
+      </div>
+    </div>
+
+    <form onSubmit={handleIntakeSubmit} className="space-y-8">
+      {/* اختيار نوع النزيل */}
+      <div className="grid grid-cols-3 gap-4">
+        <button
+          type="button"
+          onClick={() => setIntakeForm({ ...intakeForm, type: 'SUSPECT' as any })}
+          className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
+            intakeForm.type === 'SUSPECT'
+              ? 'border-primary-600 bg-primary-50 text-primary-700'
+              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+          }`}
+        >
+          <HelpCircle size={24} />
+          مشتبه به
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIntakeForm({ ...intakeForm, type: 'POW' as any })}
+          className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
+            intakeForm.type === 'POW'
+              ? 'border-red-600 bg-red-50 text-red-700'
+              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+          }`}
+        >
+          <AlertOctagon size={24} />
+          أسير حرب
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setIntakeForm({ ...intakeForm, type: 'MILITARY' as any })
+          }
+          className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
+            intakeForm.type === 'MILITARY'
+              ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+          }`}
+        >
+          <Shield size={24} />
+          عسكري (مخالف)
+        </button>
+      </div>
+
+      {/* البيانات الشخصية والعنوان */}
+      <div className="space-y-4">
+        <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
+          البيانات الشخصية والعنوان
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* الاسم */}
+          <div className="lg:col-span-2">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              الاسم واللقب
+            </label>
+            <input
+              required
+              type="text"
+              value={intakeForm.fullName || ''}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, fullName: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          {/* نوع الوثيقة */}
+          {intakeForm.type !== 'MILITARY' && (
+            <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                نوع الوثيقة
+              </label>
+              <select
+                value={intakeForm.documentType as any}
+                onChange={(e) =>
+                  setIntakeForm({
+                    ...intakeForm,
+                    documentType: e.target.value as any,
+                  })
+                }
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              >
+                <option value="ID">بطاقة شخصية</option>
+                <option value="Passport">جواز سفر</option>
+                <option value="None">لا يوجد</option>
+              </select>
+            </div>
+          )}
+
+          {/* رقم الوثيقة */}
+          {intakeForm.documentType !== 'None' && (
+            <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                {intakeForm.type === 'MILITARY'
+                  ? 'الرقم العسكري'
+                  : 'رقم الوثيقة'}
+              </label>
+              <input
+                required
+                type="text"
+                value={intakeForm.nationalId || ''}
+                onChange={(e) =>
+                  setIntakeForm({
+                    ...intakeForm,
+                    nationalId: e.target.value,
+                  })
+                }
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              />
+            </div>
+          )}
+
+          {/* تاريخ + وقت الدخول */}
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              تاريخ الدخول
+            </label>
+            <input
+              type="date"
+              value={intakeForm.entryDate}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, entryDate: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              وقت الدخول
+            </label>
+            <input
+              type="time"
+              value={intakeForm.entryTime}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, entryTime: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          {/* العنوان */}
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              المحافظة
+            </label>
+            <input
+              type="text"
+              value={intakeForm.governorate || ''}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, governorate: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              القرية / الحي
+            </label>
+            <input
+              type="text"
+              value={intakeForm.village || ''}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, village: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              مكان السكن الحالي
+            </label>
+            <input
+              type="text"
+              value={intakeForm.residence || ''}
+              onChange={(e) =>
+                setIntakeForm({ ...intakeForm, residence: e.target.value })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* مكان القبض / مكان الأسر (لكل الأنواع) */}
+      <div className="space-y-4">
+        <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
+          بيانات مكان الضبط / الأسر
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              {intakeForm.type === 'POW' ? 'مكان الأسر' : 'مكان القبض'}
+            </label>
+            <input
+              type="text"
+              value={intakeForm.capturePlace || ''}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  capturePlace: e.target.value,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* صور الوثيقة (حسب نوع الوثيقة) */}
+      {intakeForm.documentType === 'ID' && (
+        <div className="space-y-4">
+          <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
+            صور البطاقة الشخصية
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                صورة البطاقة (الوجه الأمامي)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                صورة البطاقة (الوجه الخلفي)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {intakeForm.documentType === 'Passport' && (
+        <div className="space-y-4">
+          <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
+            صورة جواز السفر
+          </h4>
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              صورة صفحة البيانات في الجواز
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+        </div>
+      )}{/* الحالة الاجتماعية والتعليمية */}
+      <div className="space-y-4">
+        <h4 className="font-bold text-slate-700 border-r-4 border-amber-500 pr-3">
+          الحالة الاجتماعية والتعليمية
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* الحالة الاجتماعية */}
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              الحالة الاجتماعية
+            </label>
+            <select
+              value={intakeForm.maritalStatus}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  maritalStatus: e.target.value as any,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            >
+              <option value="Single">عازب</option>
+              <option value="Married">متزوج</option>
+            </select>
+          </div>
+
+          {/* الأبناء */}
+          {intakeForm.maritalStatus === 'Married' && (
+            <>
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  عدد الأولاد (ذكور)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={intakeForm.childrenBoys ?? ''}
+                  onChange={(e) =>
+                    setIntakeForm({
+                      ...intakeForm,
+                      childrenBoys: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  عدد البنات (إناث)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={intakeForm.childrenGirls ?? ''}
+                  onChange={(e) =>
+                    setIntakeForm({
+                      ...intakeForm,
+                      childrenGirls: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-400 mb-2">
+                  المجموع
+                </label>
+                <div className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 font-bold">
+                  {(intakeForm.childrenBoys || 0) +
+                    (intakeForm.childrenGirls || 0)}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* التعليم */}
+          <div className="lg:col-start-1">
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              المستوى التعليمي
+            </label>
+            <select
+              value={intakeForm.educationLevel}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  educationLevel: e.target.value as any,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            >
+              <option value="University">جامعي</option>
+              <option value="HighSchool">ثانوي</option>
+              <option value="Illiterate">أمّي</option>
+            </select>
+          </div>
+
+          {/* التخصص */}
+          {intakeForm.educationLevel === 'University' && (
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-bold text-slate-600 mb-2">
+                التخصص
+              </label>
+              <input
+                type="text"
+                value={intakeForm.specialization}
+                onChange={(e) =>
+                  setIntakeForm({
+                    ...intakeForm,
+                    specialization: e.target.value,
+                  })
+                }
+                className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                placeholder="مثال: هندسة، طب..."
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* حقول حسب نوع النزيل */}
+      <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+        {/* عسكري */}
+        {intakeForm.type === 'MILITARY' && (
+          <div className="space-y-4">
+            <h4 className="font-bold text-emerald-700 flex items-center gap-2">
+              <Shield size={18} /> البيانات العسكرية
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  الوحدة العسكرية
+                </label>
+                <input
+                  type="text"
+                  value={intakeForm.unit}
+                  onChange={(e) =>
+                    setIntakeForm({ ...intakeForm, unit: e.target.value })
+                  }
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* أسير حرب */}
+        {intakeForm.type === 'POW' && (
+          <div className="space-y-4">
+            <h4 className="font-bold text-red-700 flex items-center gap-2">
+              <AlertOctagon size={18} /> بيانات الأسر
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  الجبهة المشارك فيها
+                </label>
+                <input
+                  type="text"
+                  value={intakeForm.front}
+                  onChange={(e) =>
+                    setIntakeForm({ ...intakeForm, front: e.target.value })
+                  }
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  مكان الأسر
+                </label>
+                <input
+                  type="text"
+                  value={intakeForm.capturePlace || ''}
+                  onChange={(e) =>
+                    setIntakeForm({
+                      ...intakeForm,
+                      capturePlace: e.target.value,
+                    })
+                  }
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* مشتبه به */}
+        {intakeForm.type === 'SUSPECT' && (
+          <div className="space-y-4">
+            <h4 className="font-bold text-primary-700 flex items-center gap-2">
+              <HelpCircle size={18} /> بيانات العمل (للمشتبه به)
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-600 mb-2">
+                  طبيعة العمل
+                </label>
+                <select
+                  value={intakeForm.workStatus}
+                  onChange={(e) =>
+                    setIntakeForm({
+                      ...intakeForm,
+                      workStatus: e.target.value as any,
+                    })
+                  }
+                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                >
+                  <option value="Unemployed">لا يعمل</option>
+                  <option value="Military">عسكري (سابق/حالي)</option>
+                  <option value="Civilian">موظف مدني</option>
+                </select>
+              </div>
+
+              {intakeForm.workStatus !== 'Unemployed' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">
+                      المسمى الوظيفي
+                    </label>
+                    <input
+                      type="text"
+                      value={intakeForm.jobTitle}
+                      onChange={(e) =>
+                        setIntakeForm({
+                          ...intakeForm,
+                          jobTitle: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">
+                      جهة العمل
+                    </label>
+                    <input
+                      type="text"
+                      value={intakeForm.employer}
+                      onChange={(e) =>
+                        setIntakeForm({
+                          ...intakeForm,
+                          employer: e.target.value,
+                        })
+                      }
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
+                    />
+                  </div>
+                </>
               )}
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-primary-600 text-white p-1.5 rounded-full shadow-md">
-              <Plus size={14} />
-            </div>
           </div>
-          <span className="text-xs text-slate-500 mt-2 font-bold">صورة النزيل</span>
-          <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+        )}
+      </div>
+
+      {/* بيانات التهمة */}
+      <div className="space-y-4">
+        <h4 className="font-bold text-slate-700 border-r-4 border-slate-400 pr-3">
+          بيانات التهمة والإحالة
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              التهمة المنسوبة
+            </label>
+            <input
+              required
+              type="text"
+              value={intakeForm.primaryCharge}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  primaryCharge: e.target.value,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              نوع التهمة
+            </label>
+            <select
+              value={intakeForm.chargeType}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  chargeType: e.target.value as any,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            >
+              <option value="Major">جسمية</option>
+              <option value="Regular">عادية</option>
+              <option value="Minor">بسيطة</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-600 mb-2">
+              الجهة المحيلة
+            </label>
+            <select
+              value={intakeForm.referringAuthority}
+              onChange={(e) =>
+                setIntakeForm({
+                  ...intakeForm,
+                  referringAuthority: e.target.value,
+                })
+              }
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+            >
+              <option>الشرطة العسكرية</option>
+              <option>مكافحة المخدرات</option>
+              <option>النيابة العامة</option>
+              <option>أمن الدولة</option>
+              <option>الاستخبارات</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleIntakeSubmit} className="space-y-8">
-        {/* Type Selection */}
-        <div className="grid grid-cols-3 gap-4">
-          <button 
-            type="button"
-            onClick={() => setIntakeForm({...intakeForm, type: 'SUSPECT'})}
-            className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${intakeForm.type === 'SUSPECT' ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'}`}
-          >
-            <HelpCircle size={24} />
-            مشتبه به
-          </button>
-          <button 
-             type="button"
-             onClick={() => setIntakeForm({...intakeForm, type: 'POW'})}
-             className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${intakeForm.type === 'POW' ? 'border-red-600 bg-red-50 text-red-700' : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'}`}
-          >
-            <AlertOctagon size={24} />
-            أسير حرب
-          </button>
-          <button 
-             type="button"
-             onClick={() => setIntakeForm({...intakeForm, type: 'MILITARY'})}
-             className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${intakeForm.type === 'MILITARY' ? 'border-emerald-600 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'}`}
-          >
-            <Shield size={24} />
-            عسكري (مخالف)
-          </button>
-        </div>
+      {/* زر الحفظ */}
+      <div className="pt-6 border-t border-slate-100">
+        <button
+          type="submit"
+          className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3"
+        >
+          <Save size={20} />
+          حفظ بيانات النزيل وإحالة للفحص
+        </button>
+      </div>
+    </form>
+  </div>
+);
+/* ===========================
+        شاشة الفحص
+=========================== */
+const renderInspection = () => {
 
-        {/* Section 1: Basic & Location Info */}
-        <div className="space-y-4">
-          <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">البيانات الشخصية والعنوان</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <label className="block text-sm font-bold text-slate-600 mb-2">الاسم واللقب</label>
-              <input required type="text" value={intakeForm.fullName} onChange={e => setIntakeForm({...intakeForm, fullName: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
-            
-            {intakeForm.type !== 'MILITARY' && (
-               <div>
-                  <label className="block text-sm font-bold text-slate-600 mb-2">نوع الوثيقة</label>
-                  <select value={intakeForm.documentType} onChange={e => setIntakeForm({...intakeForm, documentType: e.target.value as any})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900">
-                    <option value="ID">بطاقة شخصية</option>
-                    <option value="Passport">جواز سفر</option>
-                    <option value="None">لا يوجد</option>
-                  </select>
-               </div>
-            )}
-            
-            {intakeForm.documentType !== 'None' && (
-              <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">{intakeForm.type === 'MILITARY' ? 'الرقم العسكري' : 'رقم الوثيقة'}</label>
-                <input required type="text" value={intakeForm.nationalId} onChange={e => setIntakeForm({...intakeForm, nationalId: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
+  const pending = inmates.filter((i) => i.status === InmateStatus.PROCESSING);
+
+  // لترجمة الأنواع
+  const typeLabels: any = {
+    PHONE: "جوال",
+    WEAPON: "سلاح",
+    MONEY: "مبالغ مالية",
+    DOCUMENT: "وثيقة",
+    OTHER: "أخرى",
+  };
+
+  // لترجمة الحقول
+  const fieldLabels: any = {
+    phoneType: "نوع الجوال",
+    condition: "الحالة",
+    weaponType: "نوع السلاح",
+    weaponNumber: "رقم السلاح",
+    magazines: "عدد المخازن",
+    ammo: "الذخيرة بالمخازن",
+    currency: "العملة",
+    amount: "المبلغ",
+    docType: "نوع الوثيقة",
+    name: "اسم المضبوطة",
+    notes: "ملاحظات",
+  };
+
+  return (
+    <div className="space-y-6 animate-fadeIn">
+
+      {/* قائمة انتظار الفحص */}
+      <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
+        <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+          <ClipboardList size={18} /> النزلاء بانتظار الفحص
+        </h3>
+
+        {pending.length === 0 ? (
+          <p className="text-slate-500">لا يوجد نزلاء بانتظار الفحص.</p>
+        ) : (
+          <div className="space-y-3">
+            {pending.map((i) => (
+              <div
+                key={i.id}
+                onClick={() => setSelectedInmateForInspection(i.id)}
+                className={`p-4 rounded-xl border cursor-pointer transition ${
+                  selectedInmateForInspection === i.id
+                    ? "border-primary-600 bg-primary-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                <div className="font-bold text-slate-800">{i.fullName}</div>
+                <div className="text-xs text-slate-500">{i.referringAuthority}</div>
               </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">تاريخ الدخول</label>
-              <input type="date" value={intakeForm.entryDate} onChange={e => setIntakeForm({...intakeForm, entryDate: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">وقت الدخول</label>
-              <input type="time" value={intakeForm.entryTime} onChange={e => setIntakeForm({...intakeForm, entryTime: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">المحافظة</label>
-              <input type="text" value={intakeForm.governorate} onChange={e => setIntakeForm({...intakeForm, governorate: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">القرية / الحي</label>
-              <input type="text" value={intakeForm.village} onChange={e => setIntakeForm({...intakeForm, village: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
-             <div>
-              <label className="block text-sm font-bold text-slate-600 mb-2">مكان السكن الحالي</label>
-              <input type="text" value={intakeForm.residence} onChange={e => setIntakeForm({...intakeForm, residence: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-            </div>
+            ))}
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Section 2: Social & Education */}
-        <div className="space-y-4">
-          <h4 className="font-bold text-slate-700 border-r-4 border-amber-500 pr-3">الحالة الاجتماعية والتعليمية</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-             <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">الحالة الاجتماعية</label>
-                <select value={intakeForm.maritalStatus} onChange={e => setIntakeForm({...intakeForm, maritalStatus: e.target.value as any})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900">
-                  <option value="Single">عازب</option>
-                  <option value="Married">متزوج</option>
-                </select>
-             </div>
+      {/* نموذج الفحص */}
+      {selectedInmateForInspection && (
+        <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
 
-             {intakeForm.maritalStatus === 'Married' && (
-               <>
-                 <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2">عدد الأولاد (ذكور)</label>
-                    <input type="number" min="0" value={intakeForm.childrenBoys ?? ''} onChange={e => setIntakeForm({...intakeForm, childrenBoys: e.target.value ? Number(e.target.value) : undefined})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900" />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-bold text-slate-600 mb-2">عدد البنات (إناث)</label>
-                    <input type="number" min="0" value={intakeForm.childrenGirls ?? ''} onChange={e => setIntakeForm({...intakeForm, childrenGirls: e.target.value ? Number(e.target.value) : undefined})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900" />
-                 </div>
-                 <div>
-                    <label className="block text-sm font-bold text-slate-400 mb-2">المجموع</label>
-                    <div className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-600 font-bold">
-                       {(intakeForm.childrenBoys || 0) + (intakeForm.childrenGirls || 0)}
-                    </div>
-                 </div>
-               </>
-             )}
+          <h3 className="text-xl font-bold mb-4 flex gap-2 text-slate-800">
+            <Scan size={18} /> إجراء الفحص
+          </h3>
 
-             <div className="lg:col-start-1">
-                <label className="block text-sm font-bold text-slate-600 mb-2">المستوى التعليمي</label>
-                <select value={intakeForm.educationLevel} onChange={e => setIntakeForm({...intakeForm, educationLevel: e.target.value as any})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900">
-                  <option value="University">جامعي</option>
-                  <option value="HighSchool">ثانوي</option>
-                  <option value="Illiterate">أمّي</option>
-                </select>
-             </div>
+          <div className="space-y-4">
 
-             {intakeForm.educationLevel === 'University' && (
-                <div className="lg:col-span-2">
-                   <label className="block text-sm font-bold text-slate-600 mb-2">التخصص</label>
-                   <input type="text" value={intakeForm.specialization} onChange={e => setIntakeForm({...intakeForm, specialization: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" placeholder="مثال: هندسة، طب..." />
+            {/* التفتيش الجسدي */}
+            <div>
+              <label className="font-bold mb-1 block">هل تم التفتيش الجسدي؟</label>
+              <select
+                value={inspectionForm.isPhysicallyInspected}
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    isPhysicallyInspected: e.target.value as any,
+                  })
+                }
+                className="border p-2 rounded-xl w-full"
+              >
+                <option value="No">لم يتم</option>
+                <option value="Yes">تم التفتيش</option>
+              </select>
+            </div>
+
+            {/* ملاحظات التفتيش */}
+            <div>
+              <label className="font-bold mb-1 block">ملاحظات التفتيش الجسدي</label>
+              <textarea
+                value={inspectionForm.physicalNotes}
+                onChange={(e) =>
+                  setInspectionForm({
+                    ...inspectionForm,
+                    physicalNotes: e.target.value,
+                  })
+                }
+                className="border p-3 rounded-xl w-full"
+              />
+            </div>
+
+            {/* اختيار العنبر */}
+            <div>
+              <label className="font-bold mb-2 block">اختيار العنبر (اختياري)</label>
+              <select
+                value={inspectionWardId}
+                onChange={(e) => setInspectionWardId(e.target.value)}
+                className="border p-2 rounded-xl w-full"
+              >
+                <option value="">إرسال لقائمة انتظار التسكين</option>
+                {wards.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} — سعة {w.capacity}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* =====================
+                    المضبوطات
+            ===================== */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-300 mt-6">
+              <h3 className="text-lg font-bold text-slate-700 mb-3">المضبوطات</h3>
+
+              {/* اختيار نوع المضبوطة */}
+              <label className="font-bold mb-1 block">نوع المضبوطة</label>
+              <select
+                value={newItemType}
+                onChange={(e) => {
+                  setNewItemType(e.target.value);
+                  setNewItemData({});
+                }}
+                className="border p-2 rounded-xl w-full mb-4"
+              >
+                <option value="">اختر...</option>
+                <option value="PHONE">جوال</option>
+                <option value="WEAPON">سلاح</option>
+                <option value="MONEY">مبالغ مالية</option>
+                <option value="DOCUMENT">وثيقة</option>
+                <option value="OTHER">أخرى</option>
+              </select>
+
+              {/* جوال */}
+              {newItemType === "PHONE" && (
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label className="font-bold mb-1">نوع الجوال</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          phoneType: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">الحالة</label>
+                    <select
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          condition: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">اختر...</option>
+                      <option value="سليم">سليم</option>
+                      <option value="مكسور">مكسور</option>
+                      <option value="لا يعمل">لا يعمل</option>
+                    </select>
+                  </div>
+
+                  {/* ملاحظات */}
+                  <div>
+                    <label className="font-bold mb-1">ملاحظات</label>
+                    <textarea
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
-             )}
+              )}
+
+              {/* سلاح */}
+              {newItemType === "WEAPON" && (
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="font-bold mb-1">نوع السلاح</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          weaponType: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">رقم السلاح</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          weaponNumber: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">عدد المخازن</label>
+                    <input
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          magazines: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">الذخيرة بالمخازن</label>
+                    <input
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          ammo: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  {/* ملاحظات لكل الأنواع */}
+                  <div className="col-span-2">
+                    <label className="font-bold mb-1">ملاحظات</label>
+                    <textarea
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* مبالغ مالية */}
+              {newItemType === "MONEY" && (
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label className="font-bold mb-1">العملة</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          currency: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">المبلغ</label>
+                    <input
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          amount: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">ملاحظات</label>
+                    <textarea
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* وثائق */}
+              {newItemType === "DOCUMENT" && (
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label className="font-bold mb-1">نوع الوثيقة</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({
+                          ...newItemData,
+                          docType: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">ملاحظات</label>
+                    <textarea
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* أخرى */}
+              {newItemType === "OTHER" && (
+                <div className="space-y-4 mb-4">
+                  <div>
+                    <label className="font-bold mb-1">اسم المضبوطة</label>
+                    <input
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, name: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold mb-1">ملاحظات</label>
+                    <textarea
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* زر إضافة المضبوطة */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newItemType) {
+                    alert("اختر نوع المضبوطة أولاً");
+                    return;
+                  }
+
+                  const newItem = {
+                    id: Math.random().toString(36).substring(2, 9),
+                    type: newItemType,
+                    data: newItemData,
+                  };
+
+                  const updated = [
+                    ...(inspectionForm.belongings || []),
+                    newItem,
+                  ];
+
+                  setInspectionForm({
+                    ...inspectionForm,
+                    belongings: updated,
+                  });
+
+                  setNewItemType("");
+                  setNewItemData({});
+                }}
+                className="w-full py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 mt-4"
+              >
+                إضافة المضبوطة
+              </button>
+
+              {/* عرض المضبوطات */}
+              {inspectionForm.belongings?.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  {inspectionForm.belongings.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="p-4 border rounded-xl bg-slate-50"
+                    >
+                      <div className="text-lg font-bold text-primary-700 mb-1">
+                        {typeLabels[item.type]}
+                      </div>
+
+                      <div className="text-sm text-slate-700 space-y-1">
+                        {Object.entries(item.data).map(([k, v]) => (
+                          <div key={k}>
+                            <span className="font-bold">{fieldLabels[k]}:</span>{" "}
+                            {v}
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const updated = inspectionForm.belongings.filter(
+                            (_, i) => i !== index
+                          );
+                          setInspectionForm({
+                            ...inspectionForm,
+                            belongings: updated,
+                          });
+                        }}
+                        className="text-red-600 font-bold mt-2"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* اعتماد الفحص */}
+            <button
+              onClick={handleInspectionSubmit}
+              className="w-full py-3 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 shadow-md mt-6"
+            >
+              اعتماد الفحص
+            </button>
           </div>
         </div>
-
-        {/* Section 3: Type Specific Fields */}
-        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-           {intakeForm.type === 'MILITARY' && (
-              <div className="space-y-4">
-                 <h4 className="font-bold text-emerald-700 flex items-center gap-2"><Shield size={18}/> البيانات العسكرية</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-sm font-bold text-slate-600 mb-2">الوحدة العسكرية</label>
-                       <input type="text" value={intakeForm.unit} onChange={e => setIntakeForm({...intakeForm, unit: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900" />
-                    </div>
-                 </div>
-              </div>
-           )}
-
-           {intakeForm.type === 'POW' && (
-              <div className="space-y-4">
-                 <h4 className="font-bold text-red-700 flex items-center gap-2"><AlertOctagon size={18}/> بيانات الأسر</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-sm font-bold text-slate-600 mb-2">الجبهة المشارك فيها</label>
-                       <input type="text" value={intakeForm.front} onChange={e => setIntakeForm({...intakeForm, front: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900" />
-                    </div>
-                    <div>
-                       <label className="block text-sm font-bold text-slate-600 mb-2">مكان الأسر</label>
-                       <input type="text" value={intakeForm.capturePlace} onChange={e => setIntakeForm({...intakeForm, capturePlace: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900" />
-                    </div>
-                 </div>
-              </div>
-           )}
-
-           {intakeForm.type === 'SUSPECT' && (
-              <div className="space-y-4">
-                 <h4 className="font-bold text-primary-700 flex items-center gap-2"><HelpCircle size={18}/> بيانات العمل (للمشتبه به)</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                       <label className="block text-sm font-bold text-slate-600 mb-2">طبيعة العمل</label>
-                       <select value={intakeForm.workStatus} onChange={e => setIntakeForm({...intakeForm, workStatus: e.target.value as any})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900">
-                          <option value="Unemployed">لا يعمل</option>
-                          <option value="Military">عسكري (سابق/حالي)</option>
-                          <option value="Civilian">موظف مدني</option>
-                       </select>
-                    </div>
-                    {intakeForm.workStatus !== 'Unemployed' && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-600 mb-2">المسمى الوظيفي</label>
-                          <input type="text" value={intakeForm.jobTitle} onChange={e => setIntakeForm({...intakeForm, jobTitle: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-600 mb-2">جهة العمل</label>
-                          <input type="text" value={intakeForm.employer} onChange={e => setIntakeForm({...intakeForm, employer: e.target.value})} className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900" />
-                        </div>
-                      </>
-                    )}
-                 </div>
-              </div>
-           )}
-        </div>
-
-        {/* Section 4: Charge */}
-        <div className="space-y-4">
-           <h4 className="font-bold text-slate-700 border-r-4 border-slate-400 pr-3">بيانات التهمة والإحالة</h4>
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-             <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">التهمة المنسوبة</label>
-                <input required type="text" value={intakeForm.primaryCharge} onChange={e => setIntakeForm({...intakeForm, primaryCharge: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 outline-none text-slate-900" />
-             </div>
-             <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">نوع التهمة</label>
-                <select value={intakeForm.chargeType} onChange={e => setIntakeForm({...intakeForm, chargeType: e.target.value as any})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900">
-                   <option value="Major">جسمية</option>
-                   <option value="Regular">عادية</option>
-                   <option value="Minor">بسيطة</option>
-                </select>
-             </div>
-             <div>
-                <label className="block text-sm font-bold text-slate-600 mb-2">الجهة المحيلة</label>
-                <select value={intakeForm.referringAuthority} onChange={e => setIntakeForm({...intakeForm, referringAuthority: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900">
-                  <option>الشرطة العسكرية</option>
-                  <option>مكافحة المخدرات</option>
-                  <option>النيابة العامة</option>
-                  <option>أمن الدولة</option>
-                  <option>الاستخبارات</option>
-                </select>
-             </div>
-           </div>
-        </div>
-
-        <div className="pt-6 border-t border-slate-100">
-           <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all flex items-center justify-center gap-3">
-             <Save size={20} />
-             حفظ بيانات النزيل وإحالة للفحص
-           </button>
-        </div>
-      </form>
+      )}
     </div>
   );
+};
 
-  const renderInspection = () => {
-    const pending = inmates.filter(i => i.status === InmateStatus.PROCESSING);
-    
-    if(!selectedInmateForInspection) {
-      return (
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col animate-fadeIn">
-           <div className="p-6 border-b border-slate-100 bg-slate-50">
-             <h3 className="font-bold text-xl text-slate-800">قائمة انتظار الفحص والتفتيش</h3>
-           </div>
-           <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-             {pending.map(inmate => (
-               <div key={inmate.id} onClick={() => setSelectedInmateForInspection(inmate.id)} className="p-6 border-2 border-slate-100 rounded-2xl hover:border-primary-500 cursor-pointer transition-all group bg-white hover:shadow-lg">
-                 <div className="flex justify-between mb-2">
-                   <span className="font-bold text-slate-800 text-lg">{inmate.fullName}</span>
-                   <Scan className="text-slate-300 group-hover:text-primary-500" />
-                 </div>
-                 <p className="text-sm text-slate-500">{inmate.referringAuthority}</p>
-                 <div className="flex gap-2 mt-3">
-                   <span className={`text-[10px] px-2 py-1 rounded font-bold ${inmate.type === 'POW' ? 'bg-red-100 text-red-700' : inmate.type === 'MILITARY' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                     {inmate.type === 'POW' ? 'أسير' : inmate.type === 'MILITARY' ? 'عسكري' : 'مشتبه'}
-                   </span>
-                   <p className="text-xs text-primary-600 font-bold bg-primary-50 px-2 py-1 rounded">اضغط للبدء</p>
-                 </div>
-               </div>
-             ))}
-             {pending.length === 0 && (
-               <div className="col-span-full text-center py-20 text-slate-400">
-                 <ClipboardList size={48} className="mx-auto mb-4 opacity-20"/>
-                 <p>لا يوجد نزلاء بانتظار التفتيش حالياً</p>
-               </div>
-             )}
-           </div>
-        </div>
-      );
-    }
-
-    const inmate = inmates.find(i => i.id === selectedInmateForInspection);
-    return (
-      <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden animate-slideUp">
-         <div className="bg-slate-900 text-white p-6 flex justify-between items-center">
-            <div>
-               <h3 className="font-bold text-xl">إجراءات التفتيش الأمني</h3>
-               <p className="text-slate-400 text-sm">{inmate?.fullName} - {inmate?.type}</p>
-            </div>
-            <button onClick={() => setSelectedInmateForInspection(null)} className="bg-white/10 p-2 rounded-full hover:bg-white/20"><X size={20}/></button>
-         </div>
-         
-         <div className="p-8">
-            <div className="space-y-6">
-               <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Scan size={20}/> الفحص الجسدي</h4>
-                  <select className="w-full p-3 rounded-xl border border-slate-300 mb-3 text-slate-900" onChange={(e) => setInspectionForm({...inspectionForm, isPhysicallyInspected: e.target.value as any})}>
-                    <option value="No">اختر الحالة...</option>
-                    <option value="Yes">سليم / تم الفحص</option>
-                    <option value="Partial">ملاحظات إصابات</option>
-                  </select>
-                  <textarea placeholder="ملاحظات الفحص الجسدي..." className="w-full p-3 rounded-xl border border-slate-300 h-24 text-slate-900" onChange={e => setInspectionForm({...inspectionForm, physicalNotes: e.target.value})}></textarea>
-               </div>
-
-               <div className="bg-white p-6 rounded-2xl border border-slate-200">
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Briefcase size={20}/> المضبوطات</h4>
-                  <div className="flex gap-2 mb-2">
-                     <input id="item" placeholder="الصنف" className="flex-1 p-3 rounded-xl border border-slate-300 text-slate-900" />
-                     <button onClick={() => {
-                        const el = document.getElementById('item') as HTMLInputElement;
-                        if(el.value) {
-                           setInspectionForm({...inspectionForm, belongings: [...(inspectionForm.belongings||[]), {item: el.value, type: 'General', notes: ''}]});
-                           el.value = '';
-                        }
-                     }} className="bg-slate-800 text-white px-4 rounded-xl">+</button>
-                  </div>
-                  <div className="space-y-1">
-                     {inspectionForm.belongings?.map((b, i) => <div key={i} className="bg-slate-50 p-2 rounded border text-sm">{b.item}</div>)}
-                  </div>
-               </div>
-
-               <button onClick={handleInspectionSubmit} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg hover:bg-emerald-700">
-                  اعتماد الفحص وتحويل للتسكين
-               </button>
-            </div>
-         </div>
-      </div>
-    );
-  };
-
-  const renderHousing = () => {
-    const unassignedInmates = inmates.filter(i => 
-       i.status === InmateStatus.READY_FOR_HOUSING || (i.status === InmateStatus.DETAINED && !i.wardId)
-    );
-
-    return (
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-200px)] animate-fadeIn">
-         
-         {/* LEFT: Unassigned Queue */}
-         <div className="w-full lg:w-1/3 bg-white rounded-3xl border border-slate-200 flex flex-col overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                 <Users className="text-amber-500" /> طابور الانتظار
-              </h3>
-              <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">{unassignedInmates.length}</span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
-               {unassignedInmates.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400">
-                     <CheckCircle size={48} className="mx-auto mb-4 text-emerald-200" />
-                     <p>جميع النزلاء مسكنون</p>
-                  </div>
-               ) : (
-                  unassignedInmates.map(inmate => (
-                     <div key={inmate.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative group">
-                        <div className="flex justify-between items-start mb-2">
-                           <div>
-                              <p className="font-bold text-slate-800">{inmate.fullName}</p>
-                              <p className="text-xs text-slate-400 font-mono">{inmate.nationalId}</p>
-                           </div>
-                           <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded font-bold border border-amber-100">
-                             {inmate.status === InmateStatus.READY_FOR_HOUSING ? 'قادم من التفتيش' : 'غير مسكن'}
-                           </span>
-                        </div>
-                        
-                        {selectedInmateForHousing === inmate.id ? (
-                           <div className="mt-4 pt-3 border-t border-slate-100 animate-fadeIn">
-                              <p className="text-xs font-bold text-slate-500 mb-2">اختر العنبر:</p>
-                              <div className="grid grid-cols-2 gap-2">
-                                 {wards.map(w => (
-                                    <button 
-                                      key={w.id}
-                                      onClick={() => handleAssignWard(w.id)}
-                                      disabled={w.currentCount >= w.capacity}
-                                      className={`text-xs p-2 rounded-lg border font-bold ${w.currentCount >= w.capacity ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white border-slate-200 hover:border-primary-500 text-slate-700'}`}
-                                    >
-                                       {w.name}
-                                    </button>
-                                 ))}
-                                 <button onClick={() => setSelectedInmateForHousing(null)} className="col-span-2 text-xs text-red-500 py-1 hover:underline">إلغاء</button>
-                              </div>
-                           </div>
-                        ) : (
-                           <button 
-                             onClick={() => setSelectedInmateForHousing(inmate.id)}
-                             className="w-full mt-2 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
-                           >
-                             تسكين الآن <ArrowLeft size={12} />
-                           </button>
-                        )}
-                     </div>
-                  ))
-               )}
-            </div>
-         </div>
-
-         {/* RIGHT: Wards Grid */}
-         <div className="flex-1 bg-white rounded-3xl border border-slate-200 p-6 overflow-y-auto shadow-sm">
-            <h3 className="font-bold text-xl text-slate-800 mb-6 flex items-center gap-2">
-               <LayoutDashboard className="text-slate-900" /> خريطة العنابر
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {wards.map(ward => {
-                  const percentage = Math.round((ward.currentCount / ward.capacity) * 100);
-                  const isFull = percentage >= 100;
-                  
-                  return (
-                     <div key={ward.id} className={`p-6 rounded-[2rem] border-2 transition-all ${isFull ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-white hover:border-primary-200 hover:shadow-lg'}`}>
-                        <div className="flex justify-between items-start mb-4">
-                           <div>
-                              <h4 className="font-bold text-slate-800 text-lg">{ward.name}</h4>
-                              <p className="text-xs text-slate-500">المشرف: {ward.supervisor}</p>
-                           </div>
-                           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border-2 ${isFull ? 'bg-red-100 text-red-600 border-red-200' : 'bg-emerald-100 text-emerald-600 border-emerald-200'}`}>
-                              {percentage}%
-                           </div>
-                        </div>
-
-                        <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden mb-4">
-                           <div 
-                              className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : percentage > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                              style={{ width: `${percentage}%` }}
-                           ></div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-sm font-bold text-slate-600">
-                           <span>{ward.currentCount} نزيل</span>
-                           <span className="text-slate-400">سعة {ward.capacity}</span>
-                        </div>
-                     </div>
-                  );
-               })}
-               
-               <button 
-                  onClick={() => setCurrentView('WARD_SETUP')}
-                  className="p-6 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 transition-all gap-2 min-h-[160px]"
-               >
-                  <Plus size={32} />
-                  <span className="font-bold">إضافة عنبر جديد</span>
-               </button>
-            </div>
-         </div>
-      </div>
-    );
-  };
-
-  // Switcher Component for Prison Admin Tabs
-  if (currentView === 'WARD_SETUP' || currentView === 'NEW_INMATE' || currentView === 'INSPECTION' || currentView === 'HOUSING') {
-     // This is the default wrapper to show tabs
-     return (
-        <div className="space-y-6">
-           {/* Top Navigation for Prison Admin */}
-           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
-              {[
-                 {id: 'NEW_INMATE', label: 'تسجيل نزيل', icon: UserPlus},
-                 {id: 'INSPECTION', label: 'الفحص والتفتيش', icon: Scan},
-                 {id: 'HOUSING', label: 'التسكين', icon: Building},
-                 {id: 'INMATE_DATA', label: 'سجل بيانات النزلاء', icon: FileBadge},
-                 {id: 'MOVEMENTS', label: 'الحركة', icon: ArrowLeft},
-                 {id: 'WARD_SETUP', label: 'تهيئة العنابر', icon: Layout},
-              ].map(tab => (
-                 <button
-                    key={tab.id}
-                    onClick={() => setCurrentView(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
-                       currentView === tab.id 
-                       ? 'border-primary-600 text-primary-700 bg-primary-50/50' 
-                       : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                    }`}
-                 >
-                    <tab.icon size={18} />
-                    {tab.label}
-                 </button>
-              ))}
-           </div>
-           
-           <div className="animate-fadeIn">
-              {currentView === 'NEW_INMATE' && renderNewInmate()}
-              {currentView === 'INSPECTION' && renderInspection()}
-              {currentView === 'HOUSING' && renderHousing()}
-              {currentView === 'WARD_SETUP' && renderWardSetup()}
-           </div>
-        </div>
-     );
-  }
-
-  // Direct render for separate components to keep state isolated/clean
-  if (currentView === 'MOVEMENTS') return (
-     <div className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-4">
-             <button onClick={() => setCurrentView('NEW_INMATE')} className="p-2 hover:bg-slate-100 rounded-lg"><ArrowLeft/></button>
-             <h3 className="font-bold">حركة النزلاء</h3>
-        </div>
-        <MovementsManager onShowProfile={onShowProfile} />
-     </div>
-  );
-  
-  if (currentView === 'INMATE_DATA') return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-4">
-             <button onClick={() => setCurrentView('NEW_INMATE')} className="p-2 hover:bg-slate-100 rounded-lg"><ArrowLeft/></button>
-             <h3 className="font-bold">سجل بيانات النزلاء</h3>
-        </div>
-        <InmateManager onShowProfile={onShowProfile} />
-     </div>
+/* ===============================
+        شاشة التسكين
+=============================== */
+const renderHousing = () => {
+  const ready = inmates.filter(
+    (i) => i.status === InmateStatus.READY_FOR_HOUSING
   );
 
-  return renderNewInmate();
+  return (
+    <div className="space-y-6 animate-fadeIn">
+      
+      {/* قائمة انتظار التسكين */}
+      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+        <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+          <FileBadge size={18} /> قائمة انتظار التسكين
+        </h3>
+
+        {ready.length === 0 ? (
+          <p className="text-slate-500 text-sm">لا يوجد نزلاء بانتظار التسكين.</p>
+        ) : (
+          <div className="space-y-3">
+            {ready.map((i) => (
+              <div
+                key={i.id}
+                onClick={() => setSelectedInmateForHousing(i.id)}
+                className={`p-4 rounded-2xl border cursor-pointer transition ${
+                  selectedInmateForHousing === i.id
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                <div className="font-bold text-slate-800">{i.fullName}</div>
+                <div className="text-sm text-slate-500">
+                  {i.status === InmateStatus.READY_FOR_HOUSING
+                    ? "جاهز للتسكين – تم الفحص"
+                    : "بانتظار استكمال التسكين"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* اختيار العنبر */}
+      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+          <Building size={18} /> اختيار العنبر
+        </h3>
+
+        <select
+          value={selectedWardId}
+          onChange={(e) => setSelectedWardId(e.target.value)}
+          className="w-full border border-slate-300 rounded-2xl px-4 py-2 text-sm mb-4"
+        >
+          <option value="">اختر العنبر...</option>
+          {wards.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.name} — سعة {w.capacity}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={handleAssignWardFromHousing}
+          disabled={!selectedInmateForHousing || !selectedWardId}
+          className={`w-full px-4 py-3 rounded-2xl text-white font-bold shadow ${
+            selectedInmateForHousing && selectedWardId
+              ? "bg-primary-600 hover:bg-primary-700"
+              : "bg-slate-300 cursor-not-allowed"
+          }`}
+        >
+          تسكين النزيل
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ===============================
+        شاشة الحركة
+=============================== */
+const renderMovements = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <ArrowLeft size={20} /> حركة النزلاء
+    </h3>
+    <MovementsManager onShowProfile={onShowProfile} />
+  </div>
+);
+
+/* ===============================
+        شاشة الزيارات
+=============================== */
+const renderVisits = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <FileBadge size={20} /> الزيارات
+    </h3>
+    <VisitManager />
+  </div>
+);
+
+/* ===============================
+        شاشة بيانات النزلاء
+=============================== */
+const renderInmateData = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <FileBadge size={20} /> بيانات النزلاء
+    </h3>
+    <InmateManager onShowProfile={onShowProfile} />
+  </div>
+);
+
+/* ===============================
+        التبويبات الرئيسية
+=============================== */
+if (currentView === "MOVEMENTS") return renderMovements();
+
+return (
+  <div className="space-y-6">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
+      {[
+        { id: "NEW_INMATE", label: "تسجيل نزيل", icon: UserPlus },
+        { id: "INSPECTION", label: "الفحص والتفتيش", icon: Scan },
+        { id: "HOUSING", label: "التسكين", icon: Building },
+        { id: "INMATE_DATA", label: "سجل بيانات النزلاء", icon: FileBadge },
+        { id: "VISITS", label: "الزيارات", icon: FileBadge },
+        { id: "WARD_SETUP", label: "تهيئة العنابر", icon: Layout },
+        { id: "MOVEMENTS", label: "الحركة", icon: ArrowLeft },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => setCurrentView(tab.id)}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
+            currentView === tab.id
+              ? "border-primary-600 text-primary-700 bg-primary-50/50"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <tab.icon size={18} />
+          {tab.label}
+        </button>
+      ))}
+    </div>
+
+    {/* المحتوى */}
+    <div className="animate-fadeIn">
+      {currentView === "NEW_INMATE" && renderNewInmate()}
+      {currentView === "INSPECTION" && renderInspection()}
+      {currentView === "HOUSING" && renderHousing()}
+      {currentView === "INMATE_DATA" && renderInmateData()}
+      {currentView === "VISITS" && renderVisits()}
+      {currentView === "WARD_SETUP" && renderWardSetup()}
+    </div>
+  </div>
+);
+
 };
 
 export default PrisonAdministration;
