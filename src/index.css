@@ -1,0 +1,9 @@
+/* استخدام خط KacstArt */
+@font-face {
+  font-family: "KacstArt";
+  src: url("./assets/fonts/KacstArt.ttf") format("truetype");
+}
+
+.title-kacst {
+  font-family: "KacstArt", sans-serif;
+}
