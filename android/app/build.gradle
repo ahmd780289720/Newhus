@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+def versionPropsFile = file('version.properties')
+def Properties versionProps = new Properties()
+
+// تحميل أو إنشاء ملف version.properties
+if (versionPropsFile.exists()) {
+    versionProps.load(new FileInputStream(versionPropsFile))
+} else {
+    versionProps['VERSION_CODE'] = "1"
+    versionProps.store(new FileOutputStream(versionPropsFile), null)
+}
+
+// زيادة رقم النسخة تلقائياً
+def code = versionProps['VERSION_CODE'].toInteger() + 1
+versionProps['VERSION_CODE'] = code.toString()
+versionProps.store(new FileOutputStream(versionPropsFile), null)
+
 android {
 
     signingConfigs {
@@ -18,9 +34,13 @@ android {
         applicationId "com.nizam.security"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+
+        // ⚠️ المهم جداً: استبدال القيم الثابتة بالقيم التلقائية
+        versionCode code
+        versionName "1.${code}"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
         aaptOptions {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*~'
         }
@@ -28,7 +48,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release   // هذا أهم شيء
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'),
                     'proguard-rules.pro'
