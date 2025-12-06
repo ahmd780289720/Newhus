@@ -16,7 +16,7 @@ export type CollectionKey =
   | 'sec_sys_favorites';
 
 const DB_NAME = 'security_system';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export class SQLiteService {
   private static db: SQLiteDBConnection | null = null;
@@ -39,7 +39,7 @@ export class SQLiteService {
     );
 
     await db.open();
-
+await db.execute(`PRAGMA foreign_keys = ON;`);
     // إنشاء الجداول المطلوبة إذا لم تكن موجودة
     await this.setupSchema(db);
 
