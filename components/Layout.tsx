@@ -73,144 +73,158 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
   const navTree: TreeRoot[] = [];
 
   // Always show Prison Admin for everyone or based on strict roles
-  if (dept === Department.PRISON_ADMIN || dept === Department.GENERAL_ADMIN || true) {
-    navTree.push({
-      id: 'PRISON_ADMIN',
-      label: 'إدارة السجن',
-      icon: Lock,
-      categories: [
-        {
-          id: 'PRISON_INPUTS',
-          label: 'المدخلات والتهيئة',
-          icon: FolderPlus,
-          items: [
-            { id: 'WARD_SETUP', label: 'تهيئة العنابر والأجنحة' },
-            { id: 'NEW_INMATE', label: 'تسجيل نزيل جديد' }
-          ]
-        },
-        {
-          id: 'PRISON_OPS',
-          label: 'العمليات اليومية',
-          icon: Activity,
-          items: [
-            { id: 'INSPECTION', label: 'الفحص والتفتيش' },
-            { id: 'HOUSING', label: 'التسكين وتوزيع العنابر' },
-            { id: 'MOVEMENTS', label: 'حركة النزلاء' },
-            { id: 'VISITS', label: 'الزيارات' },        // ← هذا السطر الجديد
-            { id: 'RELEASE_ORDER', label: 'أوامر الإفراج' }
-          ]
-        },
-        {
-          id: 'PRISON_REPORTS',
-          label: 'التقارير',
-          icon: FileBarChart,
-          items: [
-            { id: 'REPORTS_CENTER', label: 'تقارير السجن' }
-          ]
-        }
-      ]
-    });
-  }
 
-  if (dept === Department.INVESTIGATIONS || dept === Department.GENERAL_ADMIN || true) {
-    navTree.push({
-      id: 'INVESTIGATIONS',
-      label: 'إدارة التحقيقات',
-      icon: FileText,
-      categories: [
-        {
-          id: 'INV_INPUTS',
-          label: 'فتح القضايا',
-          icon: FolderPlus,
-          items: [
-            { id: 'NEW_CASE', label: 'إنشاء قضية جديدة' }
-          ]
-        },
-        {
-          id: 'INV_OPS',
-          label: 'إجراءات التحقيق',
-          icon: Activity,
-          items: [
-            { id: 'MINUTES', label: 'التحقيق والمحاضر' },
-            { id: 'DECISIONS', label: 'القرارات والإحالة' }
-          ]
-        },
-        {
-          id: 'INV_REPORTS',
-          label: 'التقارير',
-          icon: FileBarChart,
-          items: [
-            { id: 'REPORTS_CENTER', label: 'تقارير التحقيقات' }
-          ]
-        }
-      ]
-    });
-  }
+// ============================
+// صلاحيات إدارة السجن
+// ============================
+if (dept === Department.PRISON_ADMIN || dept === Department.GENERAL_ADMIN) {
+  navTree.push({
+    id: 'PRISON_ADMIN',
+    label: 'إدارة السجن',
+    icon: Lock,
+    categories: [
+      {
+        id: 'PRISON_INPUTS',
+        label: 'المدخلات والتهيئة',
+        icon: FolderPlus,
+        items: [
+          { id: 'WARD_SETUP', label: 'تهيئة العنابر والأجنحة' },
+          { id: 'NEW_INMATE', label: 'تسجيل نزيل جديد' }
+        ]
+      },
+      {
+        id: 'PRISON_OPS',
+        label: 'العمليات اليومية',
+        icon: Activity,
+        items: [
+          { id: 'INSPECTION', label: 'الفحص والتفتيش' },
+          { id: 'HOUSING', label: 'التسكين وتوزيع العنابر' },
+          { id: 'MOVEMENTS', label: 'حركة النزلاء' },
+          { id: 'VISITS', label: 'الزيارات' },
+          { id: 'RELEASE_ORDER', label: 'أوامر الإفراج' }
+        ]
+      },
+      {
+        id: 'PRISON_REPORTS',
+        label: 'التقارير',
+        icon: FileBarChart,
+        items: [
+          { id: 'REPORTS_CENTER', label: 'تقارير السجن' }
+        ]
+      }
+    ]
+  });
+}
 
-  if (dept === Department.INFO_DEPT || dept === Department.GENERAL_ADMIN || true) {
-    navTree.push({
-      id: 'INFO_DEPT',
-      label: 'إدارة المعلومات',
-      icon: Database,
-      categories: [
-        {
-          id: 'INFO_INPUTS',
-          label: 'الرصد والمدخلات',
-          icon: FolderPlus,
-          items: [
-            { id: 'ADD_WANTED', label: 'إضافة مطلوب أمني' },
-            { id: 'ADD_SOURCE', label: 'تسجيل مصدر' }
-          ]
-        },
-        {
-          id: 'INFO_OPS',
-          label: 'المتابعة والتحليل',
-          icon: Activity,
-          items: [
-            { id: 'WANTED_LIST', label: 'قائمة المطلوبين' },
-            { id: 'ANALYSIS', label: 'تحليل البيانات' }
-          ]
-        },
-        {
-          id: 'INFO_REPORTS',
-          label: 'التقارير',
-          icon: FileBarChart,
-          items: [
-            { id: 'REPORTS_CENTER', label: 'تقارير المعلومات' }
-          ]
-        }
-      ]
-    });
-  }
+// ============================
+// صلاحيات التحقيقات
+// ============================
+if (dept === Department.INVESTIGATIONS || dept === Department.GENERAL_ADMIN) {
+  navTree.push({
+    id: 'INVESTIGATIONS',
+    label: 'إدارة التحقيقات',
+    icon: FileText,
+    categories: [
+      {
+        id: 'INV_INPUTS',
+        label: 'فتح القضايا',
+        icon: FolderPlus,
+        items: [
+          { id: 'NEW_CASE', label: 'إنشاء قضية جديدة' }
+        ]
+      },
+      {
+        id: 'INV_OPS',
+        label: 'إجراءات التحقيق',
+        icon: Activity,
+        items: [
+          { id: 'MINUTES', label: 'التحقيق والمحاضر' },
+          { id: 'DECISIONS', label: 'القرارات والإحالة' }
+        ]
+      },
+      {
+        id: 'INV_REPORTS',
+        label: 'التقارير',
+        icon: FileBarChart,
+        items: [
+          { id: 'REPORTS_CENTER', label: 'تقارير التحقيقات' }
+        ]
+      }
+    ]
+  });
+}
 
-  if (dept === Department.GENERAL_ADMIN || true) {
-    navTree.push({
-      id: 'MAIN_BRANCH',
-      label: 'الشعبة العامة',
-      icon: Building2,
-      categories: [
-        {
-          id: 'ADMIN_SYS',
-          label: 'إدارة النظام',
-          icon: Settings,
-          items: [
-            { id: 'CASE_TRACKING', label: 'تتبع الحالات (المدير)' },
-            { id: 'USERS', label: 'المستخدمين والصلاحيات' },
-            { id: 'BACKUP', label: 'النسخ الاحتياطي' },
-            { id: 'STORAGE', label: 'مركز التخزين والملفات' }
-          ]
-        },
-        {
-          id: 'ADMIN_REPORTS',
-          label: 'التقارير المركزية',
-          icon: FileBarChart,
-          items: [
-            { id: 'ALL_REPORTS', label: 'التقارير الموحدة' }
-          ]
-        }
-      ]
-    });
-  }
+// ============================
+// صلاحيات إدارة المعلومات
+// ============================
+if (dept === Department.INFO_DEPT || dept === Department.GENERAL_ADMIN) {
+  navTree.push({
+    id: 'INFO_DEPT',
+    label: 'إدارة المعلومات',
+    icon: Database,
+    categories: [
+      {
+        id: 'INFO_INPUTS',
+        label: 'الرصد والمدخلات',
+        icon: FolderPlus,
+        items: [
+          { id: 'ADD_WANTED', label: 'إضافة مطلوب أمني' },
+          { id: 'ADD_SOURCE', label: 'تسجيل مصدر' }
+        ]
+      },
+      {
+        id: 'INFO_OPS',
+        label: 'المتابعة والتحليل',
+        icon: Activity,
+        items: [
+          { id: 'WANTED_LIST', label: 'قائمة المطلوبين' },
+          { id: 'ANALYSIS', label: 'تحليل البيانات' }
+        ]
+      },
+      {
+        id: 'INFO_REPORTS',
+        label: 'التقارير',
+        icon: FileBarChart,
+        items: [
+          { id: 'REPORTS_CENTER', label: 'تقارير المعلومات' }
+        ]
+      }
+    ]
+  });
+}
+
+// ============================
+// صلاحيات المدير العام (فقط)
+// ============================
+if (dept === Department.GENERAL_ADMIN) {
+  navTree.push({
+    id: 'MAIN_BRANCH',
+    label: 'الشعبة العامة',
+    icon: Building2,
+    categories: [
+      {
+        id: 'ADMIN_SYS',
+        label: 'إدارة النظام',
+        icon: Settings,
+        items: [
+          { id: 'CASE_TRACKING', label: 'تتبع الحالات (المدير)' },
+          { id: 'USERS', label: 'المستخدمين والصلاحيات' },
+          { id: 'BACKUP', label: 'النسخ الاحتياطي' },
+          { id: 'STORAGE', label: 'مركز التخزين والملفات' }
+        ]
+      },
+      {
+        id: 'ADMIN_REPORTS',
+        label: 'التقارير المركزية',
+        icon: FileBarChart,
+        items: [
+          { id: 'ALL_REPORTS', label: 'التقارير الموحدة' }
+        ]
+      }
+    ]
+  });
+}
+
 
   const toggleRoot = (id: string) => {
     setExpandedRoots(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);

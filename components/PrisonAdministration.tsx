@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users,
   UserPlus,
@@ -18,19 +18,19 @@ import {
   X,
   Briefcase,
   FileBadge,
-} from 'lucide-react';
+} from "lucide-react";
 
 import {
   InmateStatus,
   Inmate,
   InspectionRecord,
   Ward,
-} from '../types';
+} from "../types";
 
-import { useSecurity } from '../context/SecurityContext';
-import MovementsManager from './MovementsManager';
-import VisitManager from './VisitManager';
-import InmateManager from './InmateManager';
+import { useSecurity } from "../context/SecurityContext";
+import MovementsManager from "./MovementsManager";
+import VisitManager from "./VisitManager";
+import InmateManager from "./InmateManager";
 
 interface PrisonAdministrationProps {
   onShowProfile?: (id: string) => void;
@@ -44,65 +44,67 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
   const {
     inmates,
     wards,
-    assignWard,
     addInmate,
     addInspection,
     addWard,
+    assignWard,
     updateInmateStatus,
+    updateInmate,
+    deleteInmate,
   } = useSecurity();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [currentView, setCurrentView] = useState<string>('NEW_INMATE');
+  const [currentView, setCurrentView] = useState<string>("NEW_INMATE");
   useEffect(() => {
     if (initialTab) setCurrentView(initialTab);
   }, [initialTab]);
-// مضبوطات
-const [newItemType, setNewItemType] = useState("");
-const [newItemData, setNewItemData] = useState({});
-// هذه لتخزين المضبوطات كلها
-const [belongingsList, setBelongingsList] = useState<any[]>([]);
+
+  // مضبوطات
+  const [newItemType, setNewItemType] = useState<string>("");
+  const [newItemData, setNewItemData] = useState<any>({});
+
   // =======================
   //      STATES
   // =======================
 
   const [wardForm, setWardForm] = useState({
-    name: '',
+    name: "",
     capacity: 20,
-    supervisor: '',
+    supervisor: "",
   });
 
-  const todayDefault = new Date().toISOString().split('T')[0];
-  const nowDefault = new Date().toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
+  const todayDefault = new Date().toISOString().split("t")[0];
+  const nowDefault = new Date().toLocaleTimeString("en-gb", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   const [intakeForm, setIntakeForm] = useState<Partial<Inmate>>({
-    type: 'SUSPECT' as any,
-    fullName: '',
-    documentType: 'ID' as any,
-    nationalId: '',
+    type: "SUSPECT" as any,
+    fullName: "",
+    documentType: "ID" as any,
+    nationalId: "",
     entryDate: todayDefault,
     entryTime: nowDefault,
-    governorate: '',
-    village: '',
-    residence: '',
-    referringAuthority: 'الشرطة العسكرية',
-    primaryCharge: '',
-    chargeType: 'Regular' as any,
-    maritalStatus: 'Single' as any,
+    governorate: "",
+    village: "",
+    residence: "",
+    referringAuthority: "الشرطة العسكرية",
+    primaryCharge: "",
+    chargeType: "Regular" as any,
+    maritalStatus: "Single" as any,
     childrenBoys: undefined,
     childrenGirls: undefined,
-    educationLevel: 'HighSchool' as any,
-    specialization: '',
-    unit: '',
-    front: '',
-    capturePlace: '',
-    workStatus: 'Unemployed' as any,
-    jobTitle: '',
-    employer: '',
-    wardId: '',
+    educationLevel: "HighSchool" as any,
+    specialization: "",
+    unit: "",
+    front: "",
+    capturePlace: "",
+    workStatus: "Unemployed" as any,
+    jobTitle: "",
+    employer: "",
+    wardId: "",
   });
 
   const [inmateImage, setInmateImage] = useState<string | null>(null);
@@ -112,222 +114,195 @@ const [belongingsList, setBelongingsList] = useState<any[]>([]);
 
   const [inspectionForm, setInspectionForm] =
     useState<Partial<InspectionRecord>>({
-      isPhysicallyInspected: 'No' as any,
-      physicalNotes: '',
+      isPhysicallyInspected: "No" as any,
+      physicalNotes: "",
       belongings: [],
-      securityIntel: '',
+      securityIntel: "",
       documents: [],
     });
 
   // اختيار العنبر من شاشة التفتيش (اختياري)
-  const [inspectionWardId, setInspectionWardId] = useState<string>('');
+  const [inspectionWardId, setInspectionWardId] = useState<string>("");
 
   // شاشة التسكين
   const [selectedInmateForHousing, setSelectedInmateForHousing] =
     useState<string | null>(null);
-  const [selectedWardId, setSelectedWardId] = useState<string>('');
+  const [selectedWardId, setSelectedWardId] = useState<string>("");
 
-// =======================
-//      ACTIONS
-// =======================
+  // =======================
+  //      ACTIONS
+  // =======================
 
-// إضافة عنبر جديد
-const handleAddWard = (e: React.FormEvent) => {
-  e.preventDefault();
-  const newWard: Ward = {
-    id: `W${Date.now()}`,
-    name: wardForm.name,
-    capacity: Number(wardForm.capacity),
-    currentCount: 0,
-    supervisor: wardForm.supervisor,
-  };
-  addWard(newWard);
-  alert("تم إضافة العنبر بنجاح!");
-  setWardForm({ name: "", capacity: 20, supervisor: "" });
-};
-
-// رفع صورة النزيل
-const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (e.target.files && e.target.files[0]) {
-    const file = e.target.files[0];
-    const imageUrl = URL.createObjectURL(file);
-    setInmateImage(imageUrl);
-  }
-};
-const addBelongingItem = () => {
-  if (!newItemType) {
-    alert("اختر نوع المضبوطة أولاً");
-    return;
-  }
-
-  if (Object.keys(newItemData).length === 0) {
-    alert("أدخل بيانات المضبوطة");
-    return;
-  }
-
-  const newItem = {
-    id: Math.random().toString(36).substring(2, 9),
-    type: newItemType,
-    data: newItemData,
+  // إضافة عنبر جديد
+  const handleAddWard = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newWard: Ward = {
+      id: `W-${Date.now()}`,
+      name: wardForm.name,
+      capacity: Number(wardForm.capacity),
+      currentCount: 0,
+      supervisor: wardForm.supervisor,
+    };
+    addWard(newWard);
+    alert("تم إضافة العنبر بنجاح!");
+    setWardForm({ name: "", capacity: 20, supervisor: "" });
   };
 
-  const updated = [...(inspectionForm.belongings || []), newItem];
-
-  setInspectionForm({ ...inspectionForm, belongings: updated });
-
-  setNewItemData({});
-  setNewItemType("");
-};
-
-// حذف غرض من المضبوطات
-const removeBelongingItem = (id: string) => {
-  setBelongingsList(belongingsList.filter((b) => b.id !== id));
-};
-
-// حفظ بيانات النزيل
-const handleIntakeSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-
-  const newId = Math.random().toString(36).substring(2, 9);
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date().toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const newInmate: Inmate = {
-    ...(intakeForm as Inmate),
-    id: newId,
-    fullName: intakeForm.fullName || "",
-    nationalId: intakeForm.nationalId || "",
-    type: intakeForm.type || "SUSPECT",
-    entryDate: intakeForm.entryDate || today,
-    entryTime: intakeForm.entryTime || now,
-    photoUrl: inmateImage || "https://via.placeholder.com/150",
-    status: InmateStatus.PROCESSING,
-    referringAuthority: intakeForm.referringAuthority || "",
-    primaryCharge: intakeForm.primaryCharge || "",
+  // رفع صورة النزيل
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setInmateImage(imageUrl);
+    }
   };
 
-  addInmate(newInmate);
+  // حفظ بيانات النزيل
+  const handleIntakeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
 
-  alert("تم تسجيل النزيل بنجاح!");
+    const newId = Math.random().toString(36).substring(2, 9);
+    const today = new Date().toISOString().split("t")[0];
+    const now = new Date().toLocaleTimeString("en-gb", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  // تصفير النموذج
-  setIntakeForm({
-    type: "SUSPECT" as any,
-    fullName: "",
-    documentType: "ID" as any,
-    nationalId: "",
-    referringAuthority: "الشرطة العسكرية",
-    primaryCharge: "",
-    maritalStatus: "Single" as any,
-    educationLevel: "HighSchool" as any,
-    workStatus: "Unemployed" as any,
-    entryDate: today,
-    entryTime: now,
-    childrenBoys: undefined,
-    childrenGirls: undefined,
-    unit: "",
-    front: "",
-    capturePlace: "",
-    residence: "",
-    governorate: "",
-    village: "",
-    wardId: "",
-  });
+    const newInmate: Inmate = {
+      ...(intakeForm as Inmate),
+      id: newId,
+      fullName: intakeForm.fullName || "",
+      nationalId: intakeForm.nationalId || "",
+      type: intakeForm.type || "SUSPECT",
+      entryDate: intakeForm.entryDate || today,
+      entryTime: intakeForm.entryTime || now,
+      photoUrl: inmateImage || "https://via.placeholder.com/150",
+      status: InmateStatus.PROCESSING,
+      referringAuthority: intakeForm.referringAuthority || "",
+      primaryCharge: intakeForm.primaryCharge || "",
+    };
 
-  setInmateImage(null);
+    addInmate(newInmate);
 
-  // الانتقال للفحص
-  setCurrentView("INSPECTION");
-  setSelectedInmateForInspection(newId);
-  setInspectionWardId("");
-};
+    alert("تم تسجيل النزيل بنجاح!");
 
-// اعتماد الفحص
-const handleInspectionSubmit = () => {
-  if (!selectedInmateForInspection) return;
+    // تصفير النموذج
+    setIntakeForm({
+      type: "SUSPECT" as any,
+      fullName: "",
+      documentType: "ID" as any,
+      nationalId: "",
+      referringAuthority: "الشرطة العسكرية",
+      primaryCharge: "",
+      maritalStatus: "Single" as any,
+      educationLevel: "HighSchool" as any,
+      workStatus: "Unemployed" as any,
+      entryDate: today,
+      entryTime: now,
+      childrenBoys: undefined,
+      childrenGirls: undefined,
+      unit: "",
+      front: "",
+      capturePlace: "",
+      residence: "",
+      governorate: "",
+      village: "",
+      wardId: "",
+    });
 
-  const today = new Date().toISOString().split("T")[0];
+    setInmateImage(null);
 
-  const record: InspectionRecord = {
-    id: Math.random().toString(36).substring(2, 9),
-    inmateId: selectedInmateForInspection,
-    officerName: "مسؤول التفتيش",
-    date: today,
-    isPhysicallyInspected: inspectionForm.isPhysicallyInspected || "No",
-    physicalNotes: inspectionForm.physicalNotes || "",
-    isBelongingsInspected: "Yes",
-    belongings: belongingsList, // ← هنا نستخدم جميع المضبوطات
-    isDocsInspected: "Yes",
-    documents: inspectionForm.documents || [],
-    initialIntel: "وارد من الاستلام",
-    securityIntel: inspectionForm.securityIntel || "",
+    // الانتقال للفحص
+    setCurrentView("INSPECTION");
+    setSelectedInmateForInspection(newId);
+    setInspectionWardId("");
   };
 
-  addInspection(record);
+  // اعتماد الفحص (يستخدم في زر "اعتماد الفحص")
+  const handleInspectionSubmit = async () => {
+    if (!selectedInmateForInspection) return;
 
-  if (inspectionWardId) {
-    // تسكين مباشر
-    assignWard(selectedInmateForInspection, inspectionWardId);
-    updateInmateStatus(
-      selectedInmateForInspection,
+    const inmate = inmates.find(
+      (i) => i.id === selectedInmateForInspection
+    );
+    if (!inmate) return;
+
+    const today = new Date().toISOString().split("t")[0];
+
+    const record: InspectionRecord = {
+      id: Math.random().toString(36).substring(2, 9),
+      inmateId: inmate.id,
+      officerName: "مسؤول التفتيش",
+      date: today,
+      isPhysicallyInspected:
+        (inspectionForm.isPhysicallyInspected as any) || "No",
+      physicalNotes: inspectionForm.physicalNotes || "",
+      isBelongingsInspected: "Yes" as any,
+      belongings: (inspectionForm.belongings as any) || [],
+      isDocsInspected: "Yes" as any,
+      documents: inspectionForm.documents || [],
+      initialIntel: "وارد من الاستلام",
+      securityIntel: inspectionForm.securityIntel || "",
+    };
+
+    await addInspection(record as any);
+
+    if (inspectionWardId) {
+      // تسكين مباشر
+      await assignWard(inmate.id, inspectionWardId);
+      await updateInmateStatus(inmate.id, InmateStatus.DETAINED);
+      alert("تم اعتماد الفحص وتسكين النزيل في العنبر المختار.");
+    } else {
+      // قائمة انتظار التسكين
+      await updateInmateStatus(
+        inmate.id,
+        InmateStatus.READY_FOR_HOUSING
+      );
+      alert("تم اعتماد الفحص. النزيل الآن في قائمة الانتظار للتسكين.");
+    }
+
+    // تصفير كل شيء
+    setSelectedInmateForInspection(null);
+    setInspectionForm({
+      isPhysicallyInspected: "No" as any,
+      physicalNotes: "",
+      belongings: [],
+      securityIntel: "",
+      documents: [],
+    });
+    setNewItemType("");
+    setNewItemData({});
+    setInspectionWardId("");
+
+    // الذهاب للتسكين
+    setCurrentView("HOUSING");
+  };
+
+  // تسكين من شاشة التسكين
+  const handleAssignWardFromHousing = async () => {
+    if (!selectedInmateForHousing || !selectedWardId) {
+      alert("اختر النزيل والعنبر أولاً");
+      return;
+    }
+
+    const ward = wards.find((w) => w.id === selectedWardId);
+    if (ward && ward.currentCount >= ward.capacity) {
+      const ok = window.confirm(
+        "هذا العنبر ممتلئ! هل تريد التسكين فوق السعة؟"
+      );
+      if (!ok) return;
+    }
+
+    await assignWard(selectedInmateForHousing, selectedWardId);
+    await updateInmateStatus(
+      selectedInmateForHousing,
       InmateStatus.DETAINED
     );
-    alert("تم اعتماد الفحص وتسكين النزيل في العنبر المختار.");
-  } else {
-    // قائمة انتظار التسكين
-    updateInmateStatus(
-      selectedInmateForInspection,
-      InmateStatus.READY_FOR_HOUSING
-    );
-    alert("تم اعتماد الفحص. النزيل الآن في قائمة الانتظار للتسكين.");
-  }
 
-  // تصفير كل شيء
-  setSelectedInmateForInspection(null);
-  setInspectionForm({
-    isPhysicallyInspected: "No" as any,
-    physicalNotes: "",
-    belongings: [],
-    securityIntel: "",
-    documents: [],
-  });
-  setBelongingsList([]); // تفريغ المضبوطات
-  setInspectionWardId("");
-
-  // الذهاب للتسكين
-  setCurrentView("HOUSING");
-};
-
-// تسكين من شاشة التسكين
-const handleAssignWardFromHousing = () => {
-  if (!selectedInmateForHousing || !selectedWardId) {
-    alert("اختر النزيل والعنبر أولاً");
-    return;
-  }
-
-  const ward = wards.find((w) => w.id === selectedWardId);
-  if (ward && ward.currentCount >= ward.capacity) {
-    const ok = window.confirm(
-      "هذا العنبر ممتلئ! هل تريد التسكين فوق السعة؟"
-    );
-    if (!ok) return;
-  }
-
-  assignWard(selectedInmateForHousing, selectedWardId);
-  updateInmateStatus(
-    selectedInmateForHousing,
-    InmateStatus.DETAINED
-  );
-  alert("تم تسكين النزيل بنجاح!");
-
-  setSelectedInmateForHousing(null);
-  setSelectedWardId("");
-};
-
-
+    alert("تم تسكين النزيل بنجاح!");
+    setSelectedInmateForHousing(null);
+    setSelectedWardId("");
+  };
 
   // =======================
   //        VIEWS
@@ -349,7 +324,9 @@ const handleAssignWardFromHousing = () => {
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
               placeholder="مثال: عنبر 5 (أحداث)"
               value={wardForm.name}
-              onChange={(e) => setWardForm({ ...wardForm, name: e.target.value })}
+              onChange={(e) =>
+                setWardForm({ ...wardForm, name: e.target.value })
+              }
             />
           </div>
 
@@ -382,7 +359,10 @@ const handleAssignWardFromHousing = () => {
                 placeholder="الرقيب..."
                 value={wardForm.supervisor}
                 onChange={(e) =>
-                  setWardForm({ ...wardForm, supervisor: e.target.value })
+                  setWardForm({
+                    ...wardForm,
+                    supervisor: e.target.value,
+                  })
                 }
               />
             </div>
@@ -417,7 +397,9 @@ const handleAssignWardFromHousing = () => {
                 <span className="block text-lg font-extrabold text-primary-600">
                   {ward.capacity}
                 </span>
-                <span className="text-[10px] text-slate-400 font-bold">سعة</span>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  سعة
+                </span>
               </div>
             </div>
           ))}
@@ -425,11 +407,10 @@ const handleAssignWardFromHousing = () => {
       </div>
     </div>
   );
-
-// ===============================
-//  شاشة تسجيل بيانات النزيل
-//  (نفس التصميم الأصلي كامل + إضافة مكان القبض + صور الوثيقة)
-// ===============================
+/* ===============================
+      شاشة تسجيل بيانات النزيل
+      (نفس التصميم الأصلي كامل + إضافة مكان القبض + صور الوثيقة)
+=============================== */
 const renderNewInmate = () => (
   <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 max-w-5xl mx-auto animate-fadeIn mb-20">
     <div className="border-b border-slate-100 pb-6 mb-8 flex justify-between items-end">
@@ -487,11 +468,11 @@ const renderNewInmate = () => (
       <div className="grid grid-cols-3 gap-4">
         <button
           type="button"
-          onClick={() => setIntakeForm({ ...intakeForm, type: 'SUSPECT' as any })}
+          onClick={() => setIntakeForm({ ...intakeForm, type: "SUSPECT" })}
           className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
-            intakeForm.type === 'SUSPECT'
-              ? 'border-primary-600 bg-primary-50 text-primary-700'
-              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+            intakeForm.type === "SUSPECT"
+              ? "border-primary-600 bg-primary-50 text-primary-700"
+              : "border-slate-100 bg-white text-slate-400 hover:bg-slate-50"
           }`}
         >
           <HelpCircle size={24} />
@@ -500,11 +481,11 @@ const renderNewInmate = () => (
 
         <button
           type="button"
-          onClick={() => setIntakeForm({ ...intakeForm, type: 'POW' as any })}
+          onClick={() => setIntakeForm({ ...intakeForm, type: "POW" })}
           className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
-            intakeForm.type === 'POW'
-              ? 'border-red-600 bg-red-50 text-red-700'
-              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+            intakeForm.type === "POW"
+              ? "border-red-600 bg-red-50 text-red-700"
+              : "border-slate-100 bg-white text-slate-400 hover:bg-slate-50"
           }`}
         >
           <AlertOctagon size={24} />
@@ -513,13 +494,11 @@ const renderNewInmate = () => (
 
         <button
           type="button"
-          onClick={() =>
-            setIntakeForm({ ...intakeForm, type: 'MILITARY' as any })
-          }
+          onClick={() => setIntakeForm({ ...intakeForm, type: "MILITARY" })}
           className={`p-4 rounded-2xl border-2 font-bold flex flex-col items-center gap-2 transition-all ${
-            intakeForm.type === 'MILITARY'
-              ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
-              : 'border-slate-100 bg-white text-slate-400 hover:bg-slate-50'
+            intakeForm.type === "MILITARY"
+              ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+              : "border-slate-100 bg-white text-slate-400 hover:bg-slate-50"
           }`}
         >
           <Shield size={24} />
@@ -527,7 +506,9 @@ const renderNewInmate = () => (
         </button>
       </div>
 
-      {/* البيانات الشخصية والعنوان */}
+      {/* ===============================  
+          البيانات الشخصية والعنوان  
+      =============================== */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
           البيانات الشخصية والعنوان
@@ -542,7 +523,7 @@ const renderNewInmate = () => (
             <input
               required
               type="text"
-              value={intakeForm.fullName || ''}
+              value={intakeForm.fullName || ""}
               onChange={(e) =>
                 setIntakeForm({ ...intakeForm, fullName: e.target.value })
               }
@@ -551,13 +532,13 @@ const renderNewInmate = () => (
           </div>
 
           {/* نوع الوثيقة */}
-          {intakeForm.type !== 'MILITARY' && (
+          {intakeForm.type !== "MILITARY" && (
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">
                 نوع الوثيقة
               </label>
               <select
-                value={intakeForm.documentType as any}
+                value={intakeForm.documentType}
                 onChange={(e) =>
                   setIntakeForm({
                     ...intakeForm,
@@ -574,29 +555,24 @@ const renderNewInmate = () => (
           )}
 
           {/* رقم الوثيقة */}
-          {intakeForm.documentType !== 'None' && (
+          {intakeForm.documentType !== "None" && (
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">
-                {intakeForm.type === 'MILITARY'
-                  ? 'الرقم العسكري'
-                  : 'رقم الوثيقة'}
+                {intakeForm.type === "MILITARY" ? "الرقم العسكري" : "رقم الوثيقة"}
               </label>
               <input
                 required
                 type="text"
-                value={intakeForm.nationalId || ''}
+                value={intakeForm.nationalId || ""}
                 onChange={(e) =>
-                  setIntakeForm({
-                    ...intakeForm,
-                    nationalId: e.target.value,
-                  })
+                  setIntakeForm({ ...intakeForm, nationalId: e.target.value })
                 }
                 className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
               />
             </div>
           )}
 
-          {/* تاريخ + وقت الدخول */}
+          {/* تاريخ الدخول */}
           <div>
             <label className="block text-sm font-bold text-slate-600 mb-2">
               تاريخ الدخول
@@ -611,6 +587,7 @@ const renderNewInmate = () => (
             />
           </div>
 
+          {/* وقت الدخول */}
           <div>
             <label className="block text-sm font-bold text-slate-600 mb-2">
               وقت الدخول
@@ -625,14 +602,14 @@ const renderNewInmate = () => (
             />
           </div>
 
-          {/* العنوان */}
+          {/* المحافظة */}
           <div>
             <label className="block text-sm font-bold text-slate-600 mb-2">
               المحافظة
             </label>
             <input
               type="text"
-              value={intakeForm.governorate || ''}
+              value={intakeForm.governorate || ""}
               onChange={(e) =>
                 setIntakeForm({ ...intakeForm, governorate: e.target.value })
               }
@@ -640,13 +617,14 @@ const renderNewInmate = () => (
             />
           </div>
 
+          {/* القرية */}
           <div>
             <label className="block text-sm font-bold text-slate-600 mb-2">
               القرية / الحي
             </label>
             <input
               type="text"
-              value={intakeForm.village || ''}
+              value={intakeForm.village || ""}
               onChange={(e) =>
                 setIntakeForm({ ...intakeForm, village: e.target.value })
               }
@@ -654,13 +632,14 @@ const renderNewInmate = () => (
             />
           </div>
 
+          {/* مكان السكن */}
           <div>
             <label className="block text-sm font-bold text-slate-600 mb-2">
               مكان السكن الحالي
             </label>
             <input
               type="text"
-              value={intakeForm.residence || ''}
+              value={intakeForm.residence || ""}
               onChange={(e) =>
                 setIntakeForm({ ...intakeForm, residence: e.target.value })
               }
@@ -670,19 +649,22 @@ const renderNewInmate = () => (
         </div>
       </div>
 
-      {/* مكان القبض / مكان الأسر (لكل الأنواع) */}
+      {/* ===============================  
+         مكان القبض / الأسر  
+      =============================== */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
           بيانات مكان الضبط / الأسر
         </h4>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-slate-600 mb-2">
-              {intakeForm.type === 'POW' ? 'مكان الأسر' : 'مكان القبض'}
+              {intakeForm.type === "POW" ? "مكان الأسر" : "مكان القبض"}
             </label>
             <input
               type="text"
-              value={intakeForm.capturePlace || ''}
+              value={intakeForm.capturePlace || ""}
               onChange={(e) =>
                 setIntakeForm({
                   ...intakeForm,
@@ -695,12 +677,15 @@ const renderNewInmate = () => (
         </div>
       </div>
 
-      {/* صور الوثيقة (حسب نوع الوثيقة) */}
-      {intakeForm.documentType === 'ID' && (
+      {/* ===============================  
+         صور الوثيقة  
+      =============================== */}
+      {intakeForm.documentType === "ID" && (
         <div className="space-y-4">
           <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
             صور البطاقة الشخصية
           </h4>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">
@@ -712,6 +697,7 @@ const renderNewInmate = () => (
                 className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
               />
             </div>
+
             <div>
               <label className="block text-sm font-bold text-slate-600 mb-2">
                 صورة البطاقة (الوجه الخلفي)
@@ -726,23 +712,26 @@ const renderNewInmate = () => (
         </div>
       )}
 
-      {intakeForm.documentType === 'Passport' && (
+      {intakeForm.documentType === "Passport" && (
         <div className="space-y-4">
           <h4 className="font-bold text-slate-700 border-r-4 border-primary-600 pr-3">
             صورة جواز السفر
           </h4>
-          <div>
-            <label className="block text-sm font-bold text-slate-600 mb-2">
-              صورة صفحة البيانات في الجواز
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
-            />
-          </div>
+
+          <label className="block text-sm font-bold text-slate-600 mb-2">
+            صورة صفحة البيانات في الجواز
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
+          />
         </div>
-      )}{/* الحالة الاجتماعية والتعليمية */}
+      )}
+
+      {/* ===============================  
+         الحالة الاجتماعية  
+      =============================== */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-700 border-r-4 border-amber-500 pr-3">
           الحالة الاجتماعية والتعليمية
@@ -769,8 +758,8 @@ const renderNewInmate = () => (
             </select>
           </div>
 
-          {/* الأبناء */}
-          {intakeForm.maritalStatus === 'Married' && (
+          {/* أبناء */}
+          {intakeForm.maritalStatus === "Married" && (
             <>
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-2">
@@ -779,13 +768,11 @@ const renderNewInmate = () => (
                 <input
                   type="number"
                   min={0}
-                  value={intakeForm.childrenBoys ?? ''}
+                  value={intakeForm.childrenBoys ?? ""}
                   onChange={(e) =>
                     setIntakeForm({
                       ...intakeForm,
-                      childrenBoys: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
+                      childrenBoys: Number(e.target.value),
                     })
                   }
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
@@ -799,13 +786,11 @@ const renderNewInmate = () => (
                 <input
                   type="number"
                   min={0}
-                  value={intakeForm.childrenGirls ?? ''}
+                  value={intakeForm.childrenGirls ?? ""}
                   onChange={(e) =>
                     setIntakeForm({
                       ...intakeForm,
-                      childrenGirls: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
+                      childrenGirls: Number(e.target.value),
                     })
                   }
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900"
@@ -845,8 +830,7 @@ const renderNewInmate = () => (
             </select>
           </div>
 
-          {/* التخصص */}
-          {intakeForm.educationLevel === 'University' && (
+          {intakeForm.educationLevel === "University" && (
             <div className="lg:col-span-2">
               <label className="block text-sm font-bold text-slate-600 mb-2">
                 التخصص
@@ -868,14 +852,17 @@ const renderNewInmate = () => (
         </div>
       </div>
 
-      {/* حقول حسب نوع النزيل */}
+      {/* ===============================  
+         حقول حسب نوع النزيل  
+      =============================== */}
       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-        {/* عسكري */}
-        {intakeForm.type === 'MILITARY' && (
+        {/* MILITARY */}
+        {intakeForm.type === "MILITARY" && (
           <div className="space-y-4">
             <h4 className="font-bold text-emerald-700 flex items-center gap-2">
               <Shield size={18} /> البيانات العسكرية
             </h4>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-2">
@@ -894,12 +881,13 @@ const renderNewInmate = () => (
           </div>
         )}
 
-        {/* أسير حرب */}
-        {intakeForm.type === 'POW' && (
+        {/* POW */}
+        {intakeForm.type === "POW" && (
           <div className="space-y-4">
             <h4 className="font-bold text-red-700 flex items-center gap-2">
               <AlertOctagon size={18} /> بيانات الأسر
             </h4>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-2">
@@ -921,7 +909,7 @@ const renderNewInmate = () => (
                 </label>
                 <input
                   type="text"
-                  value={intakeForm.capturePlace || ''}
+                  value={intakeForm.capturePlace || ""}
                   onChange={(e) =>
                     setIntakeForm({
                       ...intakeForm,
@@ -935,8 +923,8 @@ const renderNewInmate = () => (
           </div>
         )}
 
-        {/* مشتبه به */}
-        {intakeForm.type === 'SUSPECT' && (
+        {/* SUSPECT */}
+        {intakeForm.type === "SUSPECT" && (
           <div className="space-y-4">
             <h4 className="font-bold text-primary-700 flex items-center gap-2">
               <HelpCircle size={18} /> بيانات العمل (للمشتبه به)
@@ -963,7 +951,7 @@ const renderNewInmate = () => (
                 </select>
               </div>
 
-              {intakeForm.workStatus !== 'Unemployed' && (
+              {intakeForm.workStatus !== "Unemployed" && (
                 <>
                   <div>
                     <label className="block text-sm font-bold text-slate-600 mb-2">
@@ -1005,7 +993,9 @@ const renderNewInmate = () => (
         )}
       </div>
 
-      {/* بيانات التهمة */}
+      {/* ===============================  
+         بيانات التهمة  
+      =============================== */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-700 border-r-4 border-slate-400 pr-3">
           بيانات التهمة والإحالة
@@ -1089,609 +1079,639 @@ const renderNewInmate = () => (
 );
 /* ===========================
         شاشة الفحص
-=========================== */
-const renderInspection = () => {
+  =========================== */
+  const renderInspection = () => {
+    const pending = inmates.filter(
+      (i) => i.status === InmateStatus.PROCESSING
+    );
 
-  const pending = inmates.filter((i) => i.status === InmateStatus.PROCESSING);
+    // لترجمة الأنواع
+    const typeLabels: any = {
+      PHONE: "جوال",
+      WEAPON: "سلاح",
+      MONEY: "مبالغ مالية",
+      DOCUMENT: "وثيقة",
+      OTHER: "أخرى",
+    };
 
-  // لترجمة الأنواع
-  const typeLabels: any = {
-    PHONE: "جوال",
-    WEAPON: "سلاح",
-    MONEY: "مبالغ مالية",
-    DOCUMENT: "وثيقة",
-    OTHER: "أخرى",
-  };
+    // لترجمة الحقول
+    const fieldLabels: any = {
+      phoneType: "نوع الجوال",
+      condition: "الحالة",
+      weaponType: "نوع السلاح",
+      weaponNumber: "رقم السلاح",
+      magazines: "عدد المخازن",
+      ammo: "الذخيرة بالمخازن",
+      currency: "العملة",
+      amount: "المبلغ",
+      docType: "نوع الوثيقة",
+      name: "اسم المضبوطة",
+      notes: "ملاحظات",
+    };
 
-  // لترجمة الحقول
-  const fieldLabels: any = {
-    phoneType: "نوع الجوال",
-    condition: "الحالة",
-    weaponType: "نوع السلاح",
-    weaponNumber: "رقم السلاح",
-    magazines: "عدد المخازن",
-    ammo: "الذخيرة بالمخازن",
-    currency: "العملة",
-    amount: "المبلغ",
-    docType: "نوع الوثيقة",
-    name: "اسم المضبوطة",
-    notes: "ملاحظات",
-  };
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-
-      {/* قائمة انتظار الفحص */}
-      <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
-        <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
-          <ClipboardList size={18} /> النزلاء بانتظار الفحص
-        </h3>
-
-        {pending.length === 0 ? (
-          <p className="text-slate-500">لا يوجد نزلاء بانتظار الفحص.</p>
-        ) : (
-          <div className="space-y-3">
-            {pending.map((i) => (
-              <div
-                key={i.id}
-                onClick={() => setSelectedInmateForInspection(i.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition ${
-                  selectedInmateForInspection === i.id
-                    ? "border-primary-600 bg-primary-50"
-                    : "border-slate-200 bg-slate-50"
-                }`}
-              >
-                <div className="font-bold text-slate-800">{i.fullName}</div>
-                <div className="text-xs text-slate-500">{i.referringAuthority}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* نموذج الفحص */}
-      {selectedInmateForInspection && (
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        {/* قائمة انتظار الفحص */}
         <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
-
-          <h3 className="text-xl font-bold mb-4 flex gap-2 text-slate-800">
-            <Scan size={18} /> إجراء الفحص
+          <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+            <ClipboardList size={18} /> النزلاء بانتظار الفحص
           </h3>
 
-          <div className="space-y-4">
-
-            {/* التفتيش الجسدي */}
-            <div>
-              <label className="font-bold mb-1 block">هل تم التفتيش الجسدي؟</label>
-              <select
-                value={inspectionForm.isPhysicallyInspected}
-                onChange={(e) =>
-                  setInspectionForm({
-                    ...inspectionForm,
-                    isPhysicallyInspected: e.target.value as any,
-                  })
-                }
-                className="border p-2 rounded-xl w-full"
-              >
-                <option value="No">لم يتم</option>
-                <option value="Yes">تم التفتيش</option>
-              </select>
+          {pending.length === 0 ? (
+            <p className="text-slate-500">لا يوجد نزلاء بانتظار الفحص.</p>
+          ) : (
+            <div className="space-y-3">
+              {pending.map((i) => (
+                <div
+                  key={i.id}
+                  onClick={() => setSelectedInmateForInspection(i.id)}
+                  className={`p-4 rounded-xl border cursor-pointer transition ${
+                    selectedInmateForInspection === i.id
+                      ? "border-primary-600 bg-primary-50"
+                      : "border-slate-200 bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-slate-800">{i.fullName}</div>
+                  <div className="text-xs text-slate-500">
+                    {i.referringAuthority}
+                  </div>
+                </div>
+              ))}
             </div>
-
-            {/* ملاحظات التفتيش */}
-            <div>
-              <label className="font-bold mb-1 block">ملاحظات التفتيش الجسدي</label>
-              <textarea
-                value={inspectionForm.physicalNotes}
-                onChange={(e) =>
-                  setInspectionForm({
-                    ...inspectionForm,
-                    physicalNotes: e.target.value,
-                  })
-                }
-                className="border p-3 rounded-xl w-full"
-              />
-            </div>
-
-            {/* اختيار العنبر */}
-            <div>
-              <label className="font-bold mb-2 block">اختيار العنبر (اختياري)</label>
-              <select
-                value={inspectionWardId}
-                onChange={(e) => setInspectionWardId(e.target.value)}
-                className="border p-2 rounded-xl w-full"
-              >
-                <option value="">إرسال لقائمة انتظار التسكين</option>
-                {wards.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} — سعة {w.capacity}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* =====================
-                    المضبوطات
-            ===================== */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-300 mt-6">
-              <h3 className="text-lg font-bold text-slate-700 mb-3">المضبوطات</h3>
-
-              {/* اختيار نوع المضبوطة */}
-              <label className="font-bold mb-1 block">نوع المضبوطة</label>
-              <select
-                value={newItemType}
-                onChange={(e) => {
-                  setNewItemType(e.target.value);
-                  setNewItemData({});
-                }}
-                className="border p-2 rounded-xl w-full mb-4"
-              >
-                <option value="">اختر...</option>
-                <option value="PHONE">جوال</option>
-                <option value="WEAPON">سلاح</option>
-                <option value="MONEY">مبالغ مالية</option>
-                <option value="DOCUMENT">وثيقة</option>
-                <option value="OTHER">أخرى</option>
-              </select>
-
-              {/* جوال */}
-              {newItemType === "PHONE" && (
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="font-bold mb-1">نوع الجوال</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          phoneType: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">الحالة</label>
-                    <select
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          condition: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">اختر...</option>
-                      <option value="سليم">سليم</option>
-                      <option value="مكسور">مكسور</option>
-                      <option value="لا يعمل">لا يعمل</option>
-                    </select>
-                  </div>
-
-                  {/* ملاحظات */}
-                  <div>
-                    <label className="font-bold mb-1">ملاحظات</label>
-                    <textarea
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, notes: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* سلاح */}
-              {newItemType === "WEAPON" && (
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="font-bold mb-1">نوع السلاح</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          weaponType: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">رقم السلاح</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          weaponNumber: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">عدد المخازن</label>
-                    <input
-                      type="number"
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          magazines: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">الذخيرة بالمخازن</label>
-                    <input
-                      type="number"
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          ammo: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  {/* ملاحظات لكل الأنواع */}
-                  <div className="col-span-2">
-                    <label className="font-bold mb-1">ملاحظات</label>
-                    <textarea
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, notes: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* مبالغ مالية */}
-              {newItemType === "MONEY" && (
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="font-bold mb-1">العملة</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          currency: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">المبلغ</label>
-                    <input
-                      type="number"
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          amount: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">ملاحظات</label>
-                    <textarea
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, notes: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* وثائق */}
-              {newItemType === "DOCUMENT" && (
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="font-bold mb-1">نوع الوثيقة</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({
-                          ...newItemData,
-                          docType: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">ملاحظات</label>
-                    <textarea
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, notes: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* أخرى */}
-              {newItemType === "OTHER" && (
-                <div className="space-y-4 mb-4">
-                  <div>
-                    <label className="font-bold mb-1">اسم المضبوطة</label>
-                    <input
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, name: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-bold mb-1">ملاحظات</label>
-                    <textarea
-                      className="border p-2 rounded-xl w-full"
-                      onChange={(e) =>
-                        setNewItemData({ ...newItemData, notes: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* زر إضافة المضبوطة */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!newItemType) {
-                    alert("اختر نوع المضبوطة أولاً");
-                    return;
-                  }
-
-                  const newItem = {
-                    id: Math.random().toString(36).substring(2, 9),
-                    type: newItemType,
-                    data: newItemData,
-                  };
-
-                  const updated = [
-                    ...(inspectionForm.belongings || []),
-                    newItem,
-                  ];
-
-                  setInspectionForm({
-                    ...inspectionForm,
-                    belongings: updated,
-                  });
-
-                  setNewItemType("");
-                  setNewItemData({});
-                }}
-                className="w-full py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 mt-4"
-              >
-                إضافة المضبوطة
-              </button>
-
-              {/* عرض المضبوطات */}
-              {inspectionForm.belongings?.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  {inspectionForm.belongings.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="p-4 border rounded-xl bg-slate-50"
-                    >
-                      <div className="text-lg font-bold text-primary-700 mb-1">
-                        {typeLabels[item.type]}
-                      </div>
-
-                      <div className="text-sm text-slate-700 space-y-1">
-                        {Object.entries(item.data).map(([k, v]) => (
-                          <div key={k}>
-                            <span className="font-bold">{fieldLabels[k]}:</span>{" "}
-                            {v}
-                          </div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          const updated = inspectionForm.belongings.filter(
-                            (_, i) => i !== index
-                          );
-                          setInspectionForm({
-                            ...inspectionForm,
-                            belongings: updated,
-                          });
-                        }}
-                        className="text-red-600 font-bold mt-2"
-                      >
-                        حذف
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* اعتماد الفحص */}
-            <button
-              onClick={handleInspectionSubmit}
-              className="w-full py-3 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 shadow-md mt-6"
-            >
-              اعتماد الفحص
-            </button>
-          </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-};
 
-/* ===============================
-        شاشة التسكين
-=============================== */
-const renderHousing = () => {
-  const ready = inmates.filter(
-    (i) => i.status === InmateStatus.READY_FOR_HOUSING
-  );
+        {/* نموذج الفحص */}
+        {selectedInmateForInspection && (
+          <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
+            <h3 className="text-xl font-bold mb-4 flex gap-2 text-slate-800">
+              <Scan size={18} /> إجراء الفحص
+            </h3>
 
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      
-      {/* قائمة انتظار التسكين */}
-      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
-        <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-          <FileBadge size={18} /> قائمة انتظار التسكين
-        </h3>
-
-        {ready.length === 0 ? (
-          <p className="text-slate-500 text-sm">لا يوجد نزلاء بانتظار التسكين.</p>
-        ) : (
-          <div className="space-y-3">
-            {ready.map((i) => (
-              <div
-                key={i.id}
-                onClick={() => setSelectedInmateForHousing(i.id)}
-                className={`p-4 rounded-2xl border cursor-pointer transition ${
-                  selectedInmateForHousing === i.id
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-slate-200 bg-slate-50"
-                }`}
-              >
-                <div className="font-bold text-slate-800">{i.fullName}</div>
-                <div className="text-sm text-slate-500">
-                  {i.status === InmateStatus.READY_FOR_HOUSING
-                    ? "جاهز للتسكين – تم الفحص"
-                    : "بانتظار استكمال التسكين"}
-                </div>
+            <div className="space-y-4">
+              {/* التفتيش الجسدي */}
+              <div>
+                <label className="font-bold mb-1 block">
+                  هل تم التفتيش الجسدي؟
+                </label>
+                <select
+                  value={inspectionForm.isPhysicallyInspected}
+                  onChange={(e) =>
+                    setInspectionForm({
+                      ...inspectionForm,
+                      isPhysicallyInspected: e.target.value as any,
+                    })
+                  }
+                  className="border p-2 rounded-xl w-full"
+                >
+                  <option value="No">لم يتم</option>
+                  <option value="Yes">تم التفتيش</option>
+                </select>
               </div>
-            ))}
+
+              {/* ملاحظات التفتيش */}
+              <div>
+                <label className="font-bold mb-1 block">
+                  ملاحظات التفتيش الجسدي
+                </label>
+                <textarea
+                  value={inspectionForm.physicalNotes}
+                  onChange={(e) =>
+                    setInspectionForm({
+                      ...inspectionForm,
+                      physicalNotes: e.target.value,
+                    })
+                  }
+                  className="border p-3 rounded-xl w-full"
+                />
+              </div>
+
+              {/* اختيار العنبر */}
+              <div>
+                <label className="font-bold mb-2 block">
+                  اختيار العنبر (اختياري)
+                </label>
+                <select
+                  value={inspectionWardId}
+                  onChange={(e) => setInspectionWardId(e.target.value)}
+                  className="border p-2 rounded-xl w-full"
+                >
+                  <option value="">إرسال لقائمة انتظار التسكين</option>
+                  {wards.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} — سعة {w.capacity}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* =====================
+                  المضبوطات
+              ===================== */}
+              <div className="bg-white p-4 rounded-2xl border border-slate-300 mt-6">
+                <h3 className="text-lg font-bold text-slate-700 mb-3">
+                  المضبوطات
+                </h3>
+
+                {/* اختيار نوع المضبوطة */}
+                <label className="font-bold mb-1 block">نوع المضبوطة</label>
+                <select
+                  value={newItemType}
+                  onChange={(e) => {
+                    setNewItemType(e.target.value);
+                    setNewItemData({});
+                  }}
+                  className="border p-2 rounded-xl w-full mb-4"
+                >
+                  <option value="">اختر...</option>
+                  <option value="PHONE">جوال</option>
+                  <option value="WEAPON">سلاح</option>
+                  <option value="MONEY">مبالغ مالية</option>
+                  <option value="DOCUMENT">وثيقة</option>
+                  <option value="OTHER">أخرى</option>
+                </select>
+
+                {/* جوال */}
+                {newItemType === "PHONE" && (
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="font-bold mb-1">نوع الجوال</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            phoneType: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">الحالة</label>
+                      <select
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            condition: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">اختر...</option>
+                        <option value="سليم">سليم</option>
+                        <option value="مكسور">مكسور</option>
+                        <option value="لا يعمل">لا يعمل</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">ملاحظات</label>
+                      <textarea
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            notes: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* سلاح */}
+                {newItemType === "WEAPON" && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="font-bold mb-1">نوع السلاح</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            weaponType: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">رقم السلاح</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            weaponNumber: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">عدد المخازن</label>
+                      <input
+                        type="number"
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            magazines: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">
+                        الذخيرة بالمخازن
+                      </label>
+                      <input
+                        type="number"
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            ammo: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="font-bold mb-1">ملاحظات</label>
+                      <textarea
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            notes: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* مبالغ مالية */}
+                {newItemType === "MONEY" && (
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="font-bold mb-1">العملة</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            currency: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">المبلغ</label>
+                      <input
+                        type="number"
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            amount: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">ملاحظات</label>
+                      <textarea
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            notes: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* وثائق */}
+                {newItemType === "DOCUMENT" && (
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="font-bold mb-1">نوع الوثيقة</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            docType: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">ملاحظات</label>
+                      <textarea
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            notes: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* أخرى */}
+                {newItemType === "OTHER" && (
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="font-bold mb-1">اسم المضبوطة</label>
+                      <input
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-bold mb-1">ملاحظات</label>
+                      <textarea
+                        className="border p-2 rounded-xl w-full"
+                        onChange={(e) =>
+                          setNewItemData({
+                            ...newItemData,
+                            notes: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* زر إضافة المضبوطة */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newItemType) {
+                      alert("اختر نوع المضبوطة أولاً");
+                      return;
+                    }
+
+                    const newItem = {
+                      id: Math.random().toString(36).substring(2, 9),
+                      type: newItemType,
+                      data: newItemData,
+                    };
+
+                    const updated = [
+                      ...(inspectionForm.belongings || []),
+                      newItem,
+                    ];
+
+                    setInspectionForm({
+                      ...inspectionForm,
+                      belongings: updated,
+                    });
+
+                    setNewItemType("");
+                    setNewItemData({});
+                  }}
+                  className="w-full py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 mt-4"
+                >
+                  إضافة المضبوطة
+                </button>
+
+                {/* عرض المضبوطات */}
+                {inspectionForm.belongings &&
+                  inspectionForm.belongings.length > 0 && (
+                    <div className="mt-6 space-y-3">
+                      {inspectionForm.belongings.map((item: any, index) => (
+                        <div
+                          key={item.id}
+                          className="p-4 border rounded-xl bg-slate-50"
+                        >
+                          <div className="text-lg font-bold text-primary-700 mb-1">
+                            {typeLabels[item.type]}
+                          </div>
+                          <div className="text-sm text-slate-700 space-y-1">
+                            {Object.entries(item.data).map(([k, v]) => (
+                              <div key={k}>
+                                <span className="font-bold">
+                                  {fieldLabels[k]}:
+                                </span>{" "}
+                                {v as any}
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => {
+                              const updated =
+                                inspectionForm.belongings?.filter(
+                                  (_: any, i: number) => i !== index
+                                ) || [];
+                              setInspectionForm({
+                                ...inspectionForm,
+                                belongings: updated,
+                              });
+                            }}
+                            className="text-red-600 font-bold mt-2"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </div>
+
+              {/* زر اعتماد الفحص */}
+              <button
+                onClick={handleInspectionSubmit}
+                className="w-full py-3 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 shadow-md mt-6"
+              >
+                اعتماد الفحص
+              </button>
+            </div>
           </div>
         )}
       </div>
+    );
+  };
 
-      {/* اختيار العنبر */}
-      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
-        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
-          <Building size={18} /> اختيار العنبر
-        </h3>
+  /* ===============================
+        شاشة التسكين
+  =============================== */
+  const renderHousing = () => {
+    const ready = inmates.filter(
+      (i) => i.status === InmateStatus.READY_FOR_HOUSING
+    );
 
-        <select
-          value={selectedWardId}
-          onChange={(e) => setSelectedWardId(e.target.value)}
-          className="w-full border border-slate-300 rounded-2xl px-4 py-2 text-sm mb-4"
-        >
-          <option value="">اختر العنبر...</option>
-          {wards.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name} — سعة {w.capacity}
-            </option>
-          ))}
-        </select>
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        {/* قائمة انتظار التسكين */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+          <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+            <FileBadge size={18} /> قائمة انتظار التسكين
+          </h3>
 
-        <button
-          onClick={handleAssignWardFromHousing}
-          disabled={!selectedInmateForHousing || !selectedWardId}
-          className={`w-full px-4 py-3 rounded-2xl text-white font-bold shadow ${
-            selectedInmateForHousing && selectedWardId
-              ? "bg-primary-600 hover:bg-primary-700"
-              : "bg-slate-300 cursor-not-allowed"
-          }`}
-        >
-          تسكين النزيل
-        </button>
+          {ready.length === 0 ? (
+            <p className="text-slate-500 text-sm">
+              لا يوجد نزلاء بانتظار التسكين.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {ready.map((i) => (
+                <div
+                  key={i.id}
+                  onClick={() => setSelectedInmateForHousing(i.id)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition ${
+                    selectedInmateForHousing === i.id
+                      ? "border-primary-500 bg-primary-50"
+                      : "border-slate-200 bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-slate-800">{i.fullName}</div>
+                  <div className="text-sm text-slate-500">
+                    {i.status === InmateStatus.READY_FOR_HOUSING
+                      ? "جاهز للتسكين – تم الفحص"
+                      : "بانتظار استكمال التسكين"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* اختيار العنبر */}
+        <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+          <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+            <Building size={18} /> اختيار العنبر
+          </h3>
+          <select
+            value={selectedWardId}
+            onChange={(e) => setSelectedWardId(e.target.value)}
+            className="w-full border border-slate-300 rounded-2xl px-4 py-2 text-sm mb-4"
+          >
+            <option value="">اختر العنبر...</option>
+            {wards.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name} — سعة {w.capacity}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleAssignWardFromHousing}
+            disabled={!selectedInmateForHousing || !selectedWardId}
+            className={`w-full px-4 py-3 rounded-2xl text-white font-bold shadow ${
+              selectedInmateForHousing && selectedWardId
+                ? "bg-primary-600 hover:bg-primary-700"
+                : "bg-slate-300 cursor-not-allowed"
+            }`}
+          >
+            تسكين النزيل
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /* ===============================
+        شاشة الحركة
+  =============================== */
+  const renderMovements = () => (
+    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+        <ArrowLeft size={20} /> حركة النزلاء
+      </h3>
+      <MovementsManager onShowProfile={onShowProfile} />
+    </div>
+  );
+
+  /* ===============================
+        شاشة الزيارات
+  =============================== */
+  const renderVisits = () => (
+    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+        <FileBadge size={20} /> الزيارات
+      </h3>
+      <VisitManager />
+    </div>
+  );
+
+  /* ===============================
+        شاشة بيانات النزلاء
+  =============================== */
+  const renderInmateData = () => (
+    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+        <FileBadge size={20} /> بيانات النزلاء
+      </h3>
+      <InmateManager onShowProfile={onShowProfile} />
+    </div>
+  );
+
+  /* ===============================
+        التبويبات الرئيسية
+  =============================== */
+  if (currentView === "MOVEMENTS") return renderMovements();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
+        {[
+          { id: "NEW_INMATE", label: "تسجيل نزيل", icon: UserPlus },
+          { id: "INSPECTION", label: "الفحص والتفتيش", icon: Scan },
+          { id: "HOUSING", label: "التسكين", icon: Building },
+          {
+            id: "INMATE_DATA",
+            label: "سجل بيانات النزلاء",
+            icon: FileBadge,
+          },
+          { id: "VISITS", label: "الزيارات", icon: FileBadge },
+          { id: "WARD_SETUP", label: "تهيئة العنابر", icon: Layout },
+          { id: "MOVEMENTS", label: "الحركة", icon: ArrowLeft },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setCurrentView(tab.id)}
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
+              currentView === tab.id
+                ? "border-primary-600 text-primary-700 bg-primary-50/50"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <tab.icon size={18} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* المحتوى */}
+      <div className="animate-fadeIn">
+        {currentView === "NEW_INMATE" && renderNewInmate()}
+        {currentView === "INSPECTION" && renderInspection()}
+        {currentView === "HOUSING" && renderHousing()}
+        {currentView === "INMATE_DATA" && renderInmateData()}
+        {currentView === "VISITS" && renderVisits()}
+        {currentView === "WARD_SETUP" && renderWardSetup()}
       </div>
     </div>
   );
-};
-
-/* ===============================
-        شاشة الحركة
-=============================== */
-const renderMovements = () => (
-  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-      <ArrowLeft size={20} /> حركة النزلاء
-    </h3>
-    <MovementsManager onShowProfile={onShowProfile} />
-  </div>
-);
-
-/* ===============================
-        شاشة الزيارات
-=============================== */
-const renderVisits = () => (
-  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-      <FileBadge size={20} /> الزيارات
-    </h3>
-    <VisitManager />
-  </div>
-);
-
-/* ===============================
-        شاشة بيانات النزلاء
-=============================== */
-const renderInmateData = () => (
-  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-      <FileBadge size={20} /> بيانات النزلاء
-    </h3>
-    <InmateManager onShowProfile={onShowProfile} />
-  </div>
-);
-
-/* ===============================
-        التبويبات الرئيسية
-=============================== */
-if (currentView === "MOVEMENTS") return renderMovements();
-
-return (
-  <div className="space-y-6">
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
-      {[
-        { id: "NEW_INMATE", label: "تسجيل نزيل", icon: UserPlus },
-        { id: "INSPECTION", label: "الفحص والتفتيش", icon: Scan },
-        { id: "HOUSING", label: "التسكين", icon: Building },
-        { id: "INMATE_DATA", label: "سجل بيانات النزلاء", icon: FileBadge },
-        { id: "VISITS", label: "الزيارات", icon: FileBadge },
-        { id: "WARD_SETUP", label: "تهيئة العنابر", icon: Layout },
-        { id: "MOVEMENTS", label: "الحركة", icon: ArrowLeft },
-      ].map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => setCurrentView(tab.id)}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
-            currentView === tab.id
-              ? "border-primary-600 text-primary-700 bg-primary-50/50"
-              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-          }`}
-        >
-          <tab.icon size={18} />
-          {tab.label}
-        </button>
-      ))}
-    </div>
-
-    {/* المحتوى */}
-    <div className="animate-fadeIn">
-      {currentView === "NEW_INMATE" && renderNewInmate()}
-      {currentView === "INSPECTION" && renderInspection()}
-      {currentView === "HOUSING" && renderHousing()}
-      {currentView === "INMATE_DATA" && renderInmateData()}
-      {currentView === "VISITS" && renderVisits()}
-      {currentView === "WARD_SETUP" && renderWardSetup()}
-    </div>
-  </div>
-);
-
 };
 
 export default PrisonAdministration;
