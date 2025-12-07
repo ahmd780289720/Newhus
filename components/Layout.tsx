@@ -252,15 +252,7 @@ const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     setIsMobileMenuOpen(false);
   };
-const goBack = () => {
-  if (currentView === 'DASHBOARD') {
-    // نحن في الشاشة الرئيسية → افتح بطاقة التأكيد
-    setShowExitConfirm(true);
-  } else {
-    // في شاشة داخلية → رجوع عادي
-    window.history.back();
-  }
-};
+
 return (
   <>
     {/* نافذة تأكيد الخروج */}
