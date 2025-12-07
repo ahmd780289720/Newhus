@@ -271,7 +271,12 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
     setIsMobileMenuOpen(false);
   };
 
-  const goBack = () => {
+    if (currentView === 'DASHBOARD') {
+    setShowExitConfirm(true); // افتح نافذة الخروج
+  } else {
+    window.history.back(); // رجوع طبيعي
+  }
+};const goBack = () => {
     if (currentView === 'DASHBOARD') {
       setShowExitConfirm(true);
     } else {
@@ -525,15 +530,19 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
                 </button>
               </div>
 
-              {currentView !== 'DASHBOARD' && (
                 <button
-                  onClick={goBack}
-                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
-                >
-                  <ArrowRight size={20} />
-                </button>
-              )}
-
+    onClick={goBack}
+    className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
+  >
+    <ArrowRight size={20} />
+  </button>
+)}
+<button
+  onClick={goBack}
+  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
+>
+  <ArrowRight size={20} />
+</button>
               <h2 className="text-lg font-bold text-slate-800 hidden md:block">
                 {currentView === 'DASHBOARD'
                   ? 'نظرة عامة'

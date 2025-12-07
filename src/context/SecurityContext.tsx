@@ -217,6 +217,8 @@ export const SecurityProvider = ({ children }) => {
  🟦 1) التحقق من الجلسة عند تشغيل التطبيق
 =========================================== */
 useEffect(() => {
+  logout();  // إجبار الخروج عند فتح التطبيق
+}, []);
   const checkSession = async () => {
     const saved = await loadFromStorage();
 
