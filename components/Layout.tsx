@@ -56,10 +56,19 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  const toggleFavorite = (e: React.MouseEvent, rootId: string, itemId: string, label: string) => {
+  // ============================
+  // Toggle Favorite
+  // ============================
+  const toggleFavorite = (
+    e: React.MouseEvent,
+    rootId: string,
+    itemId: string,
+    label: string
+  ) => {
     e.stopPropagation();
 
     const isAlreadyFav = favorites.some((f) => f.id === itemId);
+
     if (isAlreadyFav) {
       removeFavorite(itemId);
     } else {
@@ -88,8 +97,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
   const dept = currentUser?.department;
   const navTree: TreeRoot[] = [];
 
-  // ---- صلاحيات ----
-
+  // ============================
+  // PRISON ADMIN
+  // ============================
   if (dept === Department.PRISON_ADMIN || dept === Department.GENERAL_ADMIN) {
     navTree.push({
       id: 'PRISON_ADMIN',
@@ -127,6 +137,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
     });
   }
 
+  // ============================
+  // INVESTIGATIONS
+  // ============================
   if (dept === Department.INVESTIGATIONS || dept === Department.GENERAL_ADMIN) {
     navTree.push({
       id: 'INVESTIGATIONS',
@@ -158,6 +171,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
     });
   }
 
+  // ============================
+  // INFO DEPT
+  // ============================
   if (dept === Department.INFO_DEPT || dept === Department.GENERAL_ADMIN) {
     navTree.push({
       id: 'INFO_DEPT',
@@ -192,6 +208,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
     });
   }
 
+  // ============================
+  // MAIN BRANCH
+  // ============================
   if (dept === Department.GENERAL_ADMIN) {
     navTree.push({
       id: 'MAIN_BRANCH',
@@ -252,17 +271,10 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
 
     setIsMobileMenuOpen(false);
   };
-
-  // ------------------------------------------------------
-  //  🔥 التعديل الوحيد: دالة الرجوع المصحّحة
-  // ------------------------------------------------------
+// ============================
+  // Back Button Logic
+  // ============================
   const goBack = () => {
-    if (window.history.length <= 1) {
-      // لا يوجد صفحة يرجع لها → افتح نافذة الخروج
-      setShowExitConfirm(true);
-      return;
-    }
-
     if (currentView === 'DASHBOARD') {
       setShowExitConfirm(true);
     } else {
@@ -291,9 +303,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
               <button
                 onClick={() => {
                   if (typeof App !== 'undefined') {
-                    App.exitApp();
+                    App.exitApp(); // خروج APK
                   } else {
-                    window.close();
+                    window.close(); // للمتصفح
                   }
                 }}
                 className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
@@ -305,17 +317,272 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
         </div>
       )}
 
-      {/* باقي الكود كما هو — لم ألمسه */}
+      {/* =============================== */}
+      {/*      Main Layout Container      */}
+      {/* =============================== */}
       <div className="min-h-screen bg-[#f8fafc] flex overflow-hidden font-sans text-slate-800 dir-rtl">
 
-        {/* Sidebar + محتوى الواجهة (كل شيء بدون أي تعديل)… */}
+        {/* Overlay للموبايل */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
 
-        {/* ----------- */}
-        {/*  (تم ترك بقية الكود كما هو 100%) */}
-        {/* ----------- */}
+        {/* =============================== */}
+        {/*            Sidebar              */}
+        {/* =============================== */}
+        <aside
+          className={`
+            fixed inset-y-0 right-0 z-50 w-80 bg-white border-l border-slate-200 shadow-2xl
+            transform transition-transform duration-300 lg:translate-x-0 lg:static lg:shadow-none
+            ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
+          `}
+        >
+          <div className="h-full flex flex-col relative">
 
-        {/** كل الكود تحت unchanged — نفس نسختك بالضبط */}
+            {/* Close Button للموبايل */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="lg:hidden absolute top-4 left-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors z-50 shadow-sm"
+            >
+              <X size={24} />
+            </button>
 
+            {/* Sidebar Header */}
+            <div className="p-6 flex items-center justify-between border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-lg shadow-slate-900/20 text-white">
+                  <Shield size={24} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-extrabold text-slate-900">نظام الحارس</h1>
+                  <p className="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full w-fit mt-1">
+                    v2.1
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Tree */}
+            <nav className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+
+              {/* Dashboard Button */}
+              <button
+                onClick={() => {
+                  onNavigate('DASHBOARD');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl font-bold transition-all ${
+                  currentView === 'DASHBOARD'
+                    ? 'bg-slate-900 text-white shadow-lg'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <LayoutDashboard size={20} /> لوحة القيادة
+              </button>
+
+              {/* Dynamic Tree */}
+              {navTree.map((root) => {
+                const RootIcon = root.icon;
+                const isRootExpanded = expandedRoots.includes(root.id);
+                const isRootActive = currentView === root.id;
+
+                return (
+                  <div
+                    key={root.id}
+                    className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-sm mb-2"
+                  >
+                    <button
+                      onClick={() => toggleRoot(root.id)}
+                      className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${
+                        isRootActive
+                          ? 'bg-slate-50 text-primary-700'
+                          : 'text-slate-800 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <RootIcon
+                          size={20}
+                          className={isRootActive ? 'text-primary-600' : 'text-slate-400'}
+                        />
+                        {root.label}
+                      </div>
+
+                      <ChevronLeft
+                        size={16}
+                        className={`transition-transform duration-200 ${
+                          isRootExpanded ? '-rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isRootExpanded && (
+                      <div className="bg-slate-50/50 border-t border-slate-100">
+                        {root.categories.map((cat) => {
+                          const CatIcon = cat.icon;
+                          const isCatExpanded = expandedCategories.includes(cat.id);
+
+                          return (
+                            <div key={cat.id}>
+                              <button
+                                onClick={() => toggleCategory(cat.id)}
+                                className="w-full flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider hover:text-primary-600 transition-colors"
+                              >
+                                <CatIcon size={14} />
+                                {cat.label}
+                              </button>
+
+                              {isCatExpanded && (
+                                <div className="pr-10 pl-4 pb-2 space-y-1">
+                                  {cat.items.map((item) => {
+                                    const isFav = favorites.some((f) => f.id === item.id);
+
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        className="flex items-center group/item hover:bg-primary-50 rounded-lg pr-2 transition-colors"
+                                      >
+                                        <button
+                                          onClick={() => handleNavigateToItem(root.id, item.id)}
+                                          className="flex-1 flex items-center gap-2 py-2 text-sm font-medium text-slate-600 hover:text-primary-700"
+                                        >
+                                          <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/item:bg-primary-500 transition-colors" />
+                                          {item.label}
+                                        </button>
+
+                                        <button
+                                          onClick={(e) =>
+                                            toggleFavorite(e, root.id, item.id, item.label)
+                                          }
+                                          className={`p-1.5 rounded-md hover:bg-slate-200 transition-all ${
+                                            isFav
+                                              ? 'text-amber-400 opacity-100'
+                                              : 'text-slate-300 opacity-0 group-hover:item:opacity-100'
+                                          }`}
+                                          title={
+                                            isFav ? 'إزالة من المفضلة' : 'إضافة للمفضلة'
+                                          }
+                                        >
+                                          <Star
+                                            size={16}
+                                            className={isFav ? 'fill-amber-400' : ''}
+                                          />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+
+            {/* User Footer */}
+            <div className="p-4 border-t border-slate-100">
+              <button
+                onClick={() => onNavigate('DEVELOPER_CONSOLE')}
+                className="w-full flex items-center gap-2 p-3 mb-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition-colors shadow-lg shadow-slate-900/10"
+              >
+                <Code size={14} className="text-amber-400" /> وحدة تحكم المطور
+              </button>
+
+              <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200 mt-3">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={currentUser?.avatar}
+                    className="w-10 h-10 rounded-full border-2 border-white"
+                    alt=""
+                  />
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 truncate max-w-[120px]">
+                      {currentUser?.name}
+                    </p>
+                    <p className="text-[10px] text-slate-500">{currentUser?.role}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+
+              <p className="text-[10px] text-center text-slate-300 mt-2">
+                v2.1.0 - النظام يعمل محلياً بالكامل
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        {/* =============================== */}
+        {/*            MAIN VIEW            */}
+        {/* =============================== */}
+        <main className="flex-1 flex flex-col h-screen overflow-hidden lg:mr-80 w-full">
+
+          <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-40 sticky top-0">
+            <div className="flex items-center gap-3">
+              <div className="lg:hidden">
+                <button
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="p-2 bg-slate-100 rounded-xl text-slate-600"
+                >
+                  <Menu size={24} />
+                </button>
+              </div>
+
+              {currentView !== 'DASHBOARD' && (
+                <button
+                  onClick={goBack}
+                  className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 transition-colors"
+                >
+                  <ArrowRight size={20} />
+                </button>
+              )}
+
+              <h2 className="text-lg font-bold text-slate-800 hidden md:block">
+                {currentView === 'DASHBOARD'
+                  ? 'نظرة عامة'
+                  : currentView === 'DEVELOPER_CONSOLE'
+                  ? 'إدارة قواعد البيانات'
+                  : currentView === 'STORAGE_CENTER'
+                  ? 'مدير الملفات والتخزين'
+                  : 'النظام الأمني'}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
+                <Search size={16} className="text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="بحث شامل..."
+                  className="bg-transparent outline-none text-sm w-40"
+                />
+              </div>
+
+              <button className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-primary-600 shadow-sm relative">
+                <Bell size={20} />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+              </button>
+            </div>
+          </header>
+
+          {/* محتوى الشاشات */}
+          <div className="flex-1 overflow-auto p-6">
+            <div className="max-w-7xl mx-auto animate-fadeIn">{children}</div>
+          </div>
+
+        </main>
       </div>
     </>
   );
