@@ -271,17 +271,27 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
 
     setIsMobileMenuOpen(false);
   };
-// ============================
-  // Back Button Logic
-  // ============================
-  const goBack = () => {
+
+const goBack = () => {
+  if (currentView === 'DASHBOARD') {
+    setShowExitConfirm(true);
+  } else {
+    window.history.back();
+  }
+};
+
+// 🔥 زر الرجوع في أندرويد (APK فقط)
+useEffect(() => {
+  const backHandler = App.addListener('backButton', () => {
     if (currentView === 'DASHBOARD') {
       setShowExitConfirm(true);
     } else {
       window.history.back();
     }
-  };
+  });
 
+  return () => backHandler.remove();
+}, [currentView]);
   return (
     <>
       {/* نافذة تأكيد الخروج */}
