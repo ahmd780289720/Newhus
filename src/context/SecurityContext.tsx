@@ -213,21 +213,45 @@ export const SecurityProvider = ({ children }) => {
   const loadFiles = async () => {
     return await FileRepository.getAll();
   };
+/* ===========================================
+ 🟦 1) التحقق من الجلسة عند تشغيل التطبيق
+=========================================== */
+useEffect(() => {
+  const checkSession = async () => {
+    const saved = await loadFromStorage();
 
-  /* ============================
-      🟦 تحميل كل البيانات عند التشغيل
-  ============================ */
-  useEffect(() => {
-    loadInmates();
-    loadInspections();
-    loadWards();
-    loadMovements();
-    loadVisits();
-    loadCases();
-    loadMinutes();
-    loadWanted();
-    loadSources();
-  }, []);
+    if (!saved) {
+      // لا يوجد مستخدم محفوظ → اذهب لتسجيل الدخول
+      setCurrentUser(null);
+    } else {
+      // يوجد مستخدم محفوظ لكن لا ندخل فوراً
+      setCurrentUser(saved);
+    }
+
+    setLoaded(true);
+  };
+
+  checkSession();
+}, []);
+
+/* ===========================================
+ 🟦 2) تحميل بيانات السجن بعد تسجيل الدخول فقط
+=========================================== */
+useEffect(() => {
+  if (!currentUser) return;
+
+  loadInmates();
+  loadInspections();
+  loadWards();
+  loadMovements();
+  loadVisits();
+  loadCases();
+  loadMinutes();
+  loadWanted();
+  loadSources();
+
+}, [currentUser]);
+
 
   return (
     <SecurityContext.Provider

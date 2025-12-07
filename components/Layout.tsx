@@ -1,3 +1,4 @@
+import { App } from '@capacitor/app';
 import React, { useState } from 'react';
 import {
   Shield, LayoutDashboard, Lock, FileText, Database, Building2, Menu,
@@ -37,8 +38,8 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedRoots, setExpandedRoots] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
-
-  // Toggle Favorite Logic (Direct Click)
+const [showExitConfirm, setShowExitConfirm] = useState(false);
+  // Toggle Favorite Logic
   const toggleFavorite = (e: React.MouseEvent, rootId: string, itemId: string, label: string) => {
     e.stopPropagation();
 
@@ -47,13 +48,12 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
       removeFavorite(itemId);
     } else {
       let view: ViewState = 'DASHBOARD';
-      // Logic to map item IDs back to Views
+
       if (rootId === 'PRISON_ADMIN') view = 'PRISON_ADMIN';
       else if (rootId === 'INVESTIGATIONS') view = 'INVESTIGATIONS';
       else if (rootId === 'INFO_DEPT') view = 'INFO_DEPT';
       else if (rootId === 'MAIN_BRANCH') view = 'MAIN_BRANCH';
 
-      // Correction for specific complex routes
       if (itemId === 'USERS') view = 'USER_MANAGER';
       if (itemId === 'ADD_WANTED') view = 'WANTED_MANAGER';
       if (itemId === 'REPORTS_CENTER') view = 'REPORTS_CENTER';
@@ -72,159 +72,156 @@ const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, children }) =>
   const dept = currentUser?.department;
   const navTree: TreeRoot[] = [];
 
-  // Always show Prison Admin for everyone or based on strict roles
+  // ============================
+  // صلاحيات إدارة السجن
+  // ============================
+  if (dept === Department.PRISON_ADMIN || dept === Department.GENERAL_ADMIN) {
+    navTree.push({
+      id: 'PRISON_ADMIN',
+      label: 'إدارة السجن',
+      icon: Lock,
+      categories: [
+        {
+          id: 'PRISON_INPUTS',
+          label: 'المدخلات والتهيئة',
+          icon: FolderPlus,
+          items: [
+            { id: 'WARD_SETUP', label: 'تهيئة العنابر والأجنحة' },
+            { id: 'NEW_INMATE', label: 'تسجيل نزيل جديد' }
+          ]
+        },
+        {
+          id: 'PRISON_OPS',
+          label: 'العمليات اليومية',
+          icon: Activity,
+          items: [
+            { id: 'INSPECTION', label: 'الفحص والتفتيش' },
+            { id: 'HOUSING', label: 'التسكين وتوزيع العنابر' },
+            { id: 'MOVEMENTS', label: 'حركة النزلاء' },
+            { id: 'VISITS', label: 'الزيارات' },
+            { id: 'RELEASE_ORDER', label: 'أوامر الإفراج' }
+          ]
+        },
+        {
+          id: 'PRISON_REPORTS',
+          label: 'التقارير',
+          icon: FileBarChart,
+          items: [
+            { id: 'REPORTS_CENTER', label: 'تقارير السجن' }
+          ]
+        }
+      ]
+    });
+  }
 
-// ============================
-// صلاحيات إدارة السجن
-// ============================
-if (dept === Department.PRISON_ADMIN || dept === Department.GENERAL_ADMIN) {
-  navTree.push({
-    id: 'PRISON_ADMIN',
-    label: 'إدارة السجن',
-    icon: Lock,
-    categories: [
-      {
-        id: 'PRISON_INPUTS',
-        label: 'المدخلات والتهيئة',
-        icon: FolderPlus,
-        items: [
-          { id: 'WARD_SETUP', label: 'تهيئة العنابر والأجنحة' },
-          { id: 'NEW_INMATE', label: 'تسجيل نزيل جديد' }
-        ]
-      },
-      {
-        id: 'PRISON_OPS',
-        label: 'العمليات اليومية',
-        icon: Activity,
-        items: [
-          { id: 'INSPECTION', label: 'الفحص والتفتيش' },
-          { id: 'HOUSING', label: 'التسكين وتوزيع العنابر' },
-          { id: 'MOVEMENTS', label: 'حركة النزلاء' },
-          { id: 'VISITS', label: 'الزيارات' },
-          { id: 'RELEASE_ORDER', label: 'أوامر الإفراج' }
-        ]
-      },
-      {
-        id: 'PRISON_REPORTS',
-        label: 'التقارير',
-        icon: FileBarChart,
-        items: [
-          { id: 'REPORTS_CENTER', label: 'تقارير السجن' }
-        ]
-      }
-    ]
-  });
-}
+  // ============================
+  // صلاحيات التحقيقات
+  // ============================
+  if (dept === Department.INVESTIGATIONS || dept === Department.GENERAL_ADMIN) {
+    navTree.push({
+      id: 'INVESTIGATIONS',
+      label: 'إدارة التحقيقات',
+      icon: FileText,
+      categories: [
+        {
+          id: 'INV_INPUTS',
+          label: 'فتح القضايا',
+          icon: FolderPlus,
+          items: [
+            { id: 'NEW_CASE', label: 'إنشاء قضية جديدة' }
+          ]
+        },
+        {
+          id: 'INV_OPS',
+          label: 'إجراءات التحقيق',
+          icon: Activity,
+          items: [
+            { id: 'MINUTES', label: 'التحقيق والمحاضر' },
+            { id: 'DECISIONS', label: 'القرارات والإحالة' }
+          ]
+        },
+        {
+          id: 'INV_REPORTS',
+          label: 'التقارير',
+          icon: FileBarChart,
+          items: [
+            { id: 'REPORTS_CENTER', label: 'تقارير التحقيقات' }
+          ]
+        }
+      ]
+    });
+  }
 
-// ============================
-// صلاحيات التحقيقات
-// ============================
-if (dept === Department.INVESTIGATIONS || dept === Department.GENERAL_ADMIN) {
-  navTree.push({
-    id: 'INVESTIGATIONS',
-    label: 'إدارة التحقيقات',
-    icon: FileText,
-    categories: [
-      {
-        id: 'INV_INPUTS',
-        label: 'فتح القضايا',
-        icon: FolderPlus,
-        items: [
-          { id: 'NEW_CASE', label: 'إنشاء قضية جديدة' }
-        ]
-      },
-      {
-        id: 'INV_OPS',
-        label: 'إجراءات التحقيق',
-        icon: Activity,
-        items: [
-          { id: 'MINUTES', label: 'التحقيق والمحاضر' },
-          { id: 'DECISIONS', label: 'القرارات والإحالة' }
-        ]
-      },
-      {
-        id: 'INV_REPORTS',
-        label: 'التقارير',
-        icon: FileBarChart,
-        items: [
-          { id: 'REPORTS_CENTER', label: 'تقارير التحقيقات' }
-        ]
-      }
-    ]
-  });
-}
+  // ============================
+  // صلاحيات إدارة المعلومات
+  // ============================
+  if (dept === Department.INFO_DEPT || dept === Department.GENERAL_ADMIN) {
+    navTree.push({
+      id: 'INFO_DEPT',
+      label: 'إدارة المعلومات',
+      icon: Database,
+      categories: [
+        {
+          id: 'INFO_INPUTS',
+          label: 'الرصد والمدخلات',
+          icon: FolderPlus,
+          items: [
+            { id: 'ADD_WANTED', label: 'إضافة مطلوب أمني' },
+            { id: 'ADD_SOURCE', label: 'تسجيل مصدر' }
+          ]
+        },
+        {
+          id: 'INFO_OPS',
+          label: 'المتابعة والتحليل',
+          icon: Activity,
+          items: [
+            { id: 'WANTED_LIST', label: 'قائمة المطلوبين' },
+            { id: 'ANALYSIS', label: 'تحليل البيانات' }
+          ]
+        },
+        {
+          id: 'INFO_REPORTS',
+          label: 'التقارير',
+          icon: FileBarChart,
+          items: [
+            { id: 'REPORTS_CENTER', label: 'تقارير المعلومات' }
+          ]
+        }
+      ]
+    });
+  }
 
-// ============================
-// صلاحيات إدارة المعلومات
-// ============================
-if (dept === Department.INFO_DEPT || dept === Department.GENERAL_ADMIN) {
-  navTree.push({
-    id: 'INFO_DEPT',
-    label: 'إدارة المعلومات',
-    icon: Database,
-    categories: [
-      {
-        id: 'INFO_INPUTS',
-        label: 'الرصد والمدخلات',
-        icon: FolderPlus,
-        items: [
-          { id: 'ADD_WANTED', label: 'إضافة مطلوب أمني' },
-          { id: 'ADD_SOURCE', label: 'تسجيل مصدر' }
-        ]
-      },
-      {
-        id: 'INFO_OPS',
-        label: 'المتابعة والتحليل',
-        icon: Activity,
-        items: [
-          { id: 'WANTED_LIST', label: 'قائمة المطلوبين' },
-          { id: 'ANALYSIS', label: 'تحليل البيانات' }
-        ]
-      },
-      {
-        id: 'INFO_REPORTS',
-        label: 'التقارير',
-        icon: FileBarChart,
-        items: [
-          { id: 'REPORTS_CENTER', label: 'تقارير المعلومات' }
-        ]
-      }
-    ]
-  });
-}
-
-// ============================
-// صلاحيات المدير العام (فقط)
-// ============================
-if (dept === Department.GENERAL_ADMIN) {
-  navTree.push({
-    id: 'MAIN_BRANCH',
-    label: 'الشعبة العامة',
-    icon: Building2,
-    categories: [
-      {
-        id: 'ADMIN_SYS',
-        label: 'إدارة النظام',
-        icon: Settings,
-        items: [
-          { id: 'CASE_TRACKING', label: 'تتبع الحالات (المدير)' },
-          { id: 'USERS', label: 'المستخدمين والصلاحيات' },
-          { id: 'BACKUP', label: 'النسخ الاحتياطي' },
-          { id: 'STORAGE', label: 'مركز التخزين والملفات' }
-        ]
-      },
-      {
-        id: 'ADMIN_REPORTS',
-        label: 'التقارير المركزية',
-        icon: FileBarChart,
-        items: [
-          { id: 'ALL_REPORTS', label: 'التقارير الموحدة' }
-        ]
-      }
-    ]
-  });
-}
-
+  // ============================
+  // صلاحيات المدير العام فقط
+  // ============================
+  if (dept === Department.GENERAL_ADMIN) {
+    navTree.push({
+      id: 'MAIN_BRANCH',
+      label: 'الشعبة العامة',
+      icon: Building2,
+      categories: [
+        {
+          id: 'ADMIN_SYS',
+          label: 'إدارة النظام',
+          icon: Settings,
+          items: [
+            { id: 'CASE_TRACKING', label: 'تتبع الحالات (المدير)' },
+            { id: 'USERS', label: 'المستخدمين والصلاحيات' },
+            { id: 'BACKUP', label: 'النسخ الاحتياطي' },
+            { id: 'STORAGE', label: 'مركز التخزين والملفات' }
+          ]
+        },
+        {
+          id: 'ADMIN_REPORTS',
+          label: 'التقارير المركزية',
+          icon: FileBarChart,
+          items: [
+            { id: 'ALL_REPORTS', label: 'التقارير الموحدة' }
+          ]
+        }
+      ]
+    });
+  }
 
   const toggleRoot = (id: string) => {
     setExpandedRoots(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -255,14 +252,53 @@ if (dept === Department.GENERAL_ADMIN) {
 
     setIsMobileMenuOpen(false);
   };
-
-  const goBack = () => {
+const goBack = () => {
+  if (currentView === 'DASHBOARD') {
+    // نحن في الشاشة الرئيسية → افتح بطاقة التأكيد
+    setShowExitConfirm(true);
+  } else {
+    // في شاشة داخلية → رجوع عادي
     window.history.back();
-  };
+  }
+};
+return (
+  <>
+    {/* نافذة تأكيد الخروج */}
+    {showExitConfirm && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999]">
+        <div className="bg-white w-80 p-6 rounded-2xl shadow-xl text-center">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">
+            هل تريد الخروج من التطبيق؟
+          </h2>
 
-  return (
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setShowExitConfirm(false)}
+              className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold hover:bg-slate-300"
+            >
+              إلغاء
+            </button>
+            <button
+  onClick={() => {
+    if (typeof App !== 'undefined') {
+      App.exitApp();  // الخروج الحقيقي من التطبيق APK
+    } else {
+      window.close(); // المتصفح فقط
+    }
+  }}
+  className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
+>
+  خروج
+</button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="min-h-screen bg-[#f8fafc] flex overflow-hidden font-sans text-slate-800 dir-rtl">
 
+
+      {/* Overlay */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
@@ -270,6 +306,7 @@ if (dept === Department.GENERAL_ADMIN) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`
         fixed inset-y-0 right-0 z-50 w-80 bg-white border-l border-slate-200 shadow-2xl transform transition-transform duration-300 lg:translate-x-0 lg:static lg:shadow-none
@@ -277,6 +314,7 @@ if (dept === Department.GENERAL_ADMIN) {
       `}
       >
         <div className="h-full flex flex-col relative">
+
           <button
             onClick={() => setIsMobileMenuOpen(false)}
             className="lg:hidden absolute top-4 left-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors z-50 shadow-sm"
@@ -298,7 +336,9 @@ if (dept === Department.GENERAL_ADMIN) {
             </div>
           </div>
 
+          {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+
             <button
               onClick={() => {
                 onNavigate('DASHBOARD');
@@ -314,6 +354,9 @@ if (dept === Department.GENERAL_ADMIN) {
             </button>
 
             {navTree.map(root => {
+
+              const RootIcon = root.icon;  // <-- FIXED
+
               const isRootExpanded = expandedRoots.includes(root.id);
               const isRootActive = currentView === root.id;
 
@@ -329,12 +372,15 @@ if (dept === Department.GENERAL_ADMIN) {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <root.icon
+
+                      <RootIcon
                         size={20}
                         className={isRootActive ? 'text-primary-600' : 'text-slate-400'}
                       />
+
                       {root.label}
                     </div>
+
                     <ChevronLeft
                       size={16}
                       className={`transition-transform duration-200 ${
@@ -345,22 +391,29 @@ if (dept === Department.GENERAL_ADMIN) {
 
                   {isRootExpanded && (
                     <div className="bg-slate-50/50 border-t border-slate-100">
+
                       {root.categories.map(cat => {
+
+                        const CatIcon = cat.icon;  // <-- FIXED
+
                         const isCatExpanded = expandedCategories.includes(cat.id);
+
                         return (
                           <div key={cat.id}>
                             <button
                               onClick={() => toggleCategory(cat.id)}
                               className="w-full flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider hover:text-primary-600 transition-colors"
                             >
-                              <cat.icon size={14} />
+                              <CatIcon size={14} />
                               {cat.label}
                             </button>
 
                             {isCatExpanded && (
                               <div className="pr-10 pl-4 pb-2 space-y-1">
                                 {cat.items.map(item => {
+
                                   const isFav = favorites.some(f => f.id === item.id);
+
                                   return (
                                     <div
                                       key={item.id}
@@ -373,8 +426,9 @@ if (dept === Department.GENERAL_ADMIN) {
                                         <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/item:bg-primary-500 transition-colors"></div>
                                         {item.label}
                                       </button>
+
                                       <button
-                                        onClick={e => toggleFavorite(e, root.id, item.id, item.label)}
+                                        onClick={(e) => toggleFavorite(e, root.id, item.id, item.label)}
                                         className={`p-1.5 rounded-md hover:bg-slate-200 transition-all ${
                                           isFav
                                             ? 'text-amber-400 opacity-100'
@@ -387,23 +441,28 @@ if (dept === Department.GENERAL_ADMIN) {
                                           className={isFav ? 'fill-amber-400' : ''}
                                         />
                                       </button>
+
                                     </div>
                                   );
                                 })}
                               </div>
                             )}
+
                           </div>
                         );
                       })}
+
                     </div>
                   )}
+
                 </div>
               );
             })}
           </nav>
 
+          {/* Footer */}
           <div className="p-4 border-t border-slate-100">
-            {/* Developer Console Button */}
+
             <button
               onClick={() => onNavigate('DEVELOPER_CONSOLE')}
               className="w-full flex items-center gap-2 p-3 mb-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition-colors shadow-lg shadow-slate-900/10"
@@ -425,6 +484,7 @@ if (dept === Department.GENERAL_ADMIN) {
                   <p className="text-[10px] text-slate-500">{currentUser?.role}</p>
                 </div>
               </div>
+
               <button
                 onClick={logout}
                 className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
@@ -436,13 +496,19 @@ if (dept === Department.GENERAL_ADMIN) {
             <p className="text-[10px] text-center text-slate-300 mt-2">
               v2.1.0 - النظام يعمل محلياً بالكامل
             </p>
+
           </div>
+
         </div>
       </aside>
 
+      {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden lg:mr-80 w-full">
+
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-40 sticky top-0">
+
           <div className="flex items-center gap-3">
+
             <div className="lg:hidden">
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
@@ -470,6 +536,7 @@ if (dept === Department.GENERAL_ADMIN) {
                 ? 'مدير الملفات والتخزين'
                 : 'النظام الأمني'}
             </h2>
+
           </div>
 
           <div className="flex items-center gap-3">
@@ -481,18 +548,22 @@ if (dept === Department.GENERAL_ADMIN) {
                 className="bg-transparent outline-none text-sm w-40"
               />
             </div>
+
             <button className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:text-primary-600 shadow-sm relative">
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
             </button>
           </div>
+
         </header>
 
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto animate-fadeIn">{children}</div>
         </div>
-      </main>
+
+</main>
     </div>
+  </>
   );
 };
 

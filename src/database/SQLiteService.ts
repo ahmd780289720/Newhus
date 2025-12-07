@@ -228,6 +228,49 @@ export class SQLiteService {
   }
 
   // -------------------------------
+  //   دالة الحفظ (تمت إضافتها)
+  // -------------------------------
+  static async upsertCollection(key: string, data: any) {
+    const db = await this.ensureConnection();
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS storage (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
+
+    const value = JSON.stringify(data);
+
+    await db.run(
+      `INSERT OR REPLACE INTO storage (key, value) VALUES (?, ?);`,
+      [key, value]
+    );
+  }
+
+  // -------------------------------
+  //   دالة الاسترجاع (تمت إضافتها)
+  // -------------------------------
+  static async getCollection(key: string) {
+    const db = await this.ensureConnection();
+
+    const res = await db.query(
+      `SELECT value FROM storage WHERE key = ?;`,
+      [key]
+    );
+
+    if (res.values && res.values.length > 0) {
+      try {
+        return JSON.parse(res.values[0].value);
+      } catch {
+        return res.values[0].value;
+      }
+    }
+
+    return null;
+  }
+
+  // -------------------------------
   // استرجاع DB instance
   // -------------------------------
   static async getInstance(): Promise<SQLiteDBConnection> {
