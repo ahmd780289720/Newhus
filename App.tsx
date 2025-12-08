@@ -1,4 +1,4 @@
-
+import { App as CapacitorApp } from '@capacitor/app';
 import React, { useState, useEffect } from 'react';
 import { SQLiteService } from './src/database/SQLiteService';
 import Layout from './components/Layout';
@@ -20,8 +20,12 @@ import { ViewState } from './types';
 import { useSecurity } from './context/SecurityContext';
 
 const App: React.FC = () => {
-  useEffect(() => { SQLiteService.getInstance(); }, []);
+  // تهيئة قاعدة البيانات
+  useEffect(() => {
+    SQLiteService.getInstance();
+  }, []);
 
+  // دالة اختبار (كما هي)
   const testInsert = async () => {
     const db = await SQLiteService.getInstance();
     await db.run('INSERT INTO departments (id, name) VALUES (?, ?)', ['dep-1', 'Main Department']);
@@ -33,6 +37,9 @@ const App: React.FC = () => {
   const [subView, setSubView] = useState<string | undefined>(undefined);
   const [selectedInmateId, setSelectedInmateId] = useState<string | null>(null);
 
+  // ================================
+  // التحكم بزِر الرجوع في المتصفح (popstate)
+  // ================================
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.view) {
@@ -40,6 +47,7 @@ const App: React.FC = () => {
         setSubView(event.state.subView);
       } else {
         setCurrentView('DASHBOARD');
+        setSubView(undefined);
       }
     };
 
@@ -47,6 +55,25 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // ================================
+  // زر الرجوع في أندرويد (Capacitor)
+  // ================================
+  useEffect(() => {
+    const backHandler = CapacitorApp.addListener('backButton', () => {
+      if (currentView === 'DASHBOARD') {
+        // نرسل حدث لـ Layout عشان يفتح نافذة تأكيد الخروج
+        window.dispatchEvent(new CustomEvent('show-exit-dialog'));
+      } else {
+        window.history.back();
+      }
+    });
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [currentView]);
+
+  // لو مافيش مستخدم مسجّل دخول → شاشة الدخول
   if (!currentUser) {
     return <LoginScreen />;
   }
@@ -64,11 +91,26 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'DASHBOARD':
-        return <Dashboard onNavigate={handleNavigate} onShowProfile={handleShowProfile} />;
+        return (
+          <Dashboard
+            onNavigate={handleNavigate}
+            onShowProfile={handleShowProfile}
+          />
+        );
       case 'PRISON_ADMIN':
-        return <PrisonAdministration onShowProfile={handleShowProfile} initialTab={subView} />;
+        return (
+          <PrisonAdministration
+            onShowProfile={handleShowProfile}
+            initialTab={subView}
+          />
+        );
       case 'INVESTIGATIONS':
-        return <Investigations onShowProfile={handleShowProfile} initialTab={subView} />;
+        return (
+          <Investigations
+            onShowProfile={handleShowProfile}
+            initialTab={subView}
+          />
+        );
       case 'INFO_DEPT':
         return <InformationDept initialTab={subView} />;
       case 'MAIN_BRANCH':
@@ -86,7 +128,12 @@ const App: React.FC = () => {
       case 'DEVELOPER_CONSOLE':
         return <DeveloperConsole />;
       default:
-        return <Dashboard onNavigate={handleNavigate} onShowProfile={handleShowProfile} />;
+        return (
+          <Dashboard
+            onNavigate={handleNavigate}
+            onShowProfile={handleShowProfile}
+          />
+        );
     }
   };
 
@@ -98,9 +145,9 @@ const App: React.FC = () => {
         </div>
 
         {selectedInmateId && (
-          <InmateProfileModal 
-            inmateId={selectedInmateId} 
-            onClose={() => setSelectedInmateId(null)} 
+          <InmateProfileModal
+            inmateId={selectedInmateId}
+            onClose={() => setSelectedInmateId(null)}
           />
         )}
       </Layout>
