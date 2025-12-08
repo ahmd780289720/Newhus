@@ -1,5 +1,5 @@
 import { App } from '@capacitor/app';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   LayoutDashboard,
