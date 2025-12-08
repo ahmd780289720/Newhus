@@ -302,27 +302,33 @@ useEffect(() => {
               هل تريد الخروج من التطبيق؟
             </h2>
 
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => setShowExitConfirm(false)}
-                className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold hover:bg-slate-300"
-              >
-                إلغاء
-              </button>
+<div className="flex gap-3 justify-center">
 
-              <button
-                onClick={() => {
-                  if (typeof App !== 'undefined') {
-                    App.exitApp(); // خروج APK
-                  } else {
-                    window.close(); // للمتصفح
-                  }
-                }}
-                className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
-              >
-                خروج
-              </button>
-            </div>
+  {/* زر الإلغاء */}
+  <button
+    onClick={() => setShowExitConfirm(false)}
+    className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold hover:bg-slate-300"
+  >
+    إلغاء
+  </button>
+
+  {/* زر الخروج الصحيح */}
+  <button
+    onClick={() => {
+      logout(); // تسجيل خروج
+      if (typeof App !== "undefined") {
+        App.exitApp();
+      } else {
+        window.close();
+      }
+    }}
+    className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
+  >
+    خروج
+  </button>
+
+</div>
+
           </div>
         </div>
       )}
