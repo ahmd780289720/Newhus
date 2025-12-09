@@ -1,4 +1,4 @@
-
+import { useToast } from "../src/context/ToastContext";
 import React from 'react';
 import { 
   Database, 
@@ -13,6 +13,7 @@ interface InformationDeptProps {
 }
 
 const InformationDept: React.FC<InformationDeptProps> = ({ initialTab }) => {
+const { showToast } = useToast();
   return (
     <div className="space-y-6 pb-20 animate-fadeIn">
       <div className="flex items-center justify-between">

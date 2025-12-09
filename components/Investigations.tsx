@@ -1,4 +1,4 @@
-
+import { useToast } from "../src/context/ToastContext";
 import React, { useState, useRef } from 'react';
 import { 
   FileText, Scale, Plus, Gavel, AlertCircle, FileCheck, X, Camera, Upload, Paperclip, 
@@ -14,6 +14,7 @@ interface InvestigationsProps {
 }
 
 const Investigations: React.FC<InvestigationsProps> = ({ onShowProfile, initialTab }) => {
+  const { showToast } = useToast();
   const { cases, inmates, inspections, addCase, addMinute, minutes, currentUser } = useSecurity();
   const [activeTab, setActiveTab] = useState<'CASES' | 'MINUTES'>((initialTab === 'MINUTES' ? 'MINUTES' : 'CASES'));
   const [viewMode, setViewMode] = useState<'GRID' | 'TABLE'>('GRID');

@@ -1,4 +1,4 @@
-
+import { useToast } from "../src/context/ToastContext";
 import React, { useRef, useState } from 'react';
 import { 
   Mail, Users, HardDrive, Trash2, Download, Upload, Activity, Search, ShieldCheck, AlertTriangle, X, CheckCircle
@@ -10,6 +10,7 @@ interface MainBranchProps {
 }
 
 const MainBranch: React.FC<MainBranchProps> = ({ initialTab }) => {
+const { showToast } = useToast();
   const { resetSystem, inmates, cases, createBackup, parseBackupFile, restoreData, auditLogs } = useSecurity();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'LOGS' | 'CASE_TRACKING'>((initialTab as any) || 'DASHBOARD');

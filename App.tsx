@@ -1,6 +1,8 @@
-import { App as CapacitorApp } from '@capacitor/app';
 import React, { useState, useEffect } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
+import ReportsCenter from "./components/ReportsCenter";
 import { SQLiteService } from './src/database/SQLiteService';
+
 import Layout from './components/Layout';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './components/Dashboard';
@@ -10,35 +12,48 @@ import InformationDept from './components/InformationDept';
 import MainBranch from './components/MainBranch';
 import WantedManager from './components/WantedManager';
 import ReportsManager from './components/ReportsManager';
-import StorageManager from './components/SyncManager'; // Updated Import
+import StorageManager from './components/SyncManager';
 import UserManager from './components/UserManager';
 import InmateProfileModal from './components/InmateProfileModal';
 import ReleaseOrder from './components/ReleaseOrder';
-import DeveloperConsole from './components/DeveloperConsole'; // Import
-import ErrorBoundary from './components/ErrorBoundary'; // Import
+import DeveloperConsole from './components/DeveloperConsole';
+import ErrorBoundary from './components/ErrorBoundary';
+
 import { ViewState } from './types';
 import { useSecurity } from './context/SecurityContext';
 
+// 🔥 إضافة ToastProvider هنا
+import { ToastProvider } from './src/context/ToastContext';
+
 const App: React.FC = () => {
-  // تهيئة قاعدة البيانات
-  useEffect(() => {
-    SQLiteService.getInstance();
-  }, []);
-
-  // دالة اختبار (كما هي)
-  const testInsert = async () => {
-    const db = await SQLiteService.getInstance();
-    await db.run('INSERT INTO departments (id, name) VALUES (?, ?)', ['dep-1', 'Main Department']);
-    alert('تم الإدخال بنجاح');
-  };
-
   const { currentUser } = useSecurity();
+
   const [currentView, setCurrentView] = useState<ViewState>('DASHBOARD');
   const [subView, setSubView] = useState<string | undefined>(undefined);
   const [selectedInmateId, setSelectedInmateId] = useState<string | null>(null);
 
+  // تشغيل SQLite
+  useEffect(() => {
+    SQLiteService.getInstance();
+  }, []);
+
   // ================================
-  // التحكم بزِر الرجوع في المتصفح (popstate)
+  // 👇 زر الرجوع الخاص بأندرويد
+  // ================================
+  useEffect(() => {
+    const backHandler = CapacitorApp.addListener('backButton', () => {
+      if (currentView === 'DASHBOARD') {
+        window.dispatchEvent(new CustomEvent('show-exit-dialog'));
+      } else {
+        window.history.back();
+      }
+    });
+
+    return () => backHandler.remove();
+  }, [currentView]);
+
+  // ================================
+  // دعم التنقل عبر popstate
   // ================================
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -47,7 +62,6 @@ const App: React.FC = () => {
         setSubView(event.state.subView);
       } else {
         setCurrentView('DASHBOARD');
-        setSubView(undefined);
       }
     };
 
@@ -56,28 +70,19 @@ const App: React.FC = () => {
   }, []);
 
   // ================================
-  // زر الرجوع في أندرويد (Capacitor)
+  // شاشة تسجيل الدخول
   // ================================
-  useEffect(() => {
-    const backHandler = CapacitorApp.addListener('backButton', () => {
-      if (currentView === 'DASHBOARD') {
-        // نرسل حدث لـ Layout عشان يفتح نافذة تأكيد الخروج
-        window.dispatchEvent(new CustomEvent('show-exit-dialog'));
-      } else {
-        window.history.back();
-      }
-    });
-
-    return () => {
-      backHandler.remove();
-    };
-  }, [currentView]);
-
-  // لو مافيش مستخدم مسجّل دخول → شاشة الدخول
   if (!currentUser) {
-    return <LoginScreen />;
+    return (
+      <ToastProvider>
+        <LoginScreen />
+      </ToastProvider>
+    );
   }
 
+  // ================================
+  // دوال التنقل
+  // ================================
   const handleShowProfile = (inmateId: string) => {
     setSelectedInmateId(inmateId);
   };
@@ -88,6 +93,9 @@ const App: React.FC = () => {
     setSubView(sub);
   };
 
+  // ================================
+  // اختيار الشاشة المناسبة
+  // ================================
   const renderView = () => {
     switch (currentView) {
       case 'DASHBOARD':
@@ -117,8 +125,8 @@ const App: React.FC = () => {
         return <MainBranch initialTab={subView} />;
       case 'WANTED_MANAGER':
         return <WantedManager />;
-      case 'REPORTS_CENTER':
-        return <ReportsManager onNavigate={handleNavigate} />;
+case 'REPORTS_CENTER':
+  return <ReportsCenter onNavigate={handleNavigate} />;
       case 'STORAGE_CENTER':
         return <StorageManager />;
       case 'USER_MANAGER':
@@ -137,20 +145,23 @@ const App: React.FC = () => {
     }
   };
 
+  // ================================
+  // الواجهة النهائية
+  // ================================
   return (
     <ErrorBoundary>
-      <Layout currentView={currentView} onNavigate={handleNavigate}>
-        <div className="animate-fadeIn pb-10">
-          {renderView()}
-        </div>
+      <ToastProvider>
+        <Layout currentView={currentView} onNavigate={handleNavigate}>
+          <div className="animate-fadeIn pb-10">{renderView()}</div>
 
-        {selectedInmateId && (
-          <InmateProfileModal
-            inmateId={selectedInmateId}
-            onClose={() => setSelectedInmateId(null)}
-          />
-        )}
-      </Layout>
+          {selectedInmateId && (
+            <InmateProfileModal
+              inmateId={selectedInmateId}
+              onClose={() => setSelectedInmateId(null)}
+            />
+          )}
+        </Layout>
+      </ToastProvider>
     </ErrorBoundary>
   );
 };

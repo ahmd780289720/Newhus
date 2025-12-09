@@ -3,6 +3,7 @@ import {
   Users,
   UserPlus,
   Scan,
+  Edit2,
   Building,
   Shield,
   HelpCircle,
@@ -26,12 +27,13 @@ import {
   InspectionRecord,
   Ward,
 } from "../types";
-
+import { useToast } from "../src/context/ToastContext";
 import { useSecurity } from "../context/SecurityContext";
 import MovementsManager from "./MovementsManager";
 import VisitManager from "./VisitManager";
 import InmateManager from "./InmateManager";
-
+import InmateProfileModal from "./InmateProfileModal";
+import { BelongingsRepository } from '../repositories/BelongingsRepository';
 interface PrisonAdministrationProps {
   onShowProfile?: (id: string) => void;
   initialTab?: string;
@@ -41,6 +43,7 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
   onShowProfile,
   initialTab,
 }) => {
+const { showToast } = useToast();
   const {
     inmates,
     wards,
@@ -63,6 +66,12 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
   // مضبوطات
   const [newItemType, setNewItemType] = useState<string>("");
   const [newItemData, setNewItemData] = useState<any>({});
+  // =========================
+  // حالة تعديل المضبوطات
+  // =========================
+  const [editingBelongingIndex, setEditingBelongingIndex] = useState<number | null>(null);
+  const [editBelongingData, setEditBelongingData] = useState<any>({});
+  const [editBelongingType, setEditBelongingType] = useState<string>('');  
 
   // =======================
   //      STATES
@@ -217,52 +226,51 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
     setSelectedInmateForInspection(newId);
     setInspectionWardId("");
   };
+// اعتماد الفحص (يستخدم في زر "اعتماد الفحص")
+const handleInspectionSubmit = async () => {
+  if (!selectedInmateForInspection) return;
 
-  // اعتماد الفحص (يستخدم في زر "اعتماد الفحص")
-  const handleInspectionSubmit = async () => {
-    if (!selectedInmateForInspection) return;
+  const newStatus =
+    inspectionWardId === "" ? InmateStatus.WAITING : InmateStatus.HOUSED;
 
-    const inmate = inmates.find(
-      (i) => i.id === selectedInmateForInspection
-    );
-    if (!inmate) return;
+  // 1) حفظ الفحص بدون المضبوطات
+  await updateInmate(selectedInmateForInspection, {
+    ...inspectionForm,
+    belongings: undefined,    // مهم جداً: منع تخزين المضبوطات داخل كائن النزيل
+    status: newStatus,
+  });
 
-    const today = new Date().toISOString().split("t")[0];
-
-    const record: InspectionRecord = {
-      id: Math.random().toString(36).substring(2, 9),
-      inmateId: inmate.id,
-      officerName: "مسؤول التفتيش",
-      date: today,
-      isPhysicallyInspected:
-        (inspectionForm.isPhysicallyInspected as any) || "No",
-      physicalNotes: inspectionForm.physicalNotes || "",
-      isBelongingsInspected: "Yes" as any,
-      belongings: (inspectionForm.belongings as any) || [],
-      isDocsInspected: "Yes" as any,
-      documents: inspectionForm.documents || [],
-      initialIntel: "وارد من الاستلام",
-      securityIntel: inspectionForm.securityIntel || "",
-    };
-
-    await addInspection(record as any);
-
-    if (inspectionWardId) {
-      // تسكين مباشر
-      await assignWard(inmate.id, inspectionWardId);
-      await updateInmateStatus(inmate.id, InmateStatus.DETAINED);
-      alert("تم اعتماد الفحص وتسكين النزيل في العنبر المختار.");
-    } else {
-      // قائمة انتظار التسكين
-      await updateInmateStatus(
-        inmate.id,
-        InmateStatus.READY_FOR_HOUSING
+  // 2) حفظ المضبوطات في جدول مستقل
+  if (inspectionForm.belongings && inspectionForm.belongings.length > 0) {
+    for (const item of inspectionForm.belongings) {
+      await BelongingsRepository.add(
+        selectedInmateForInspection, // رقم النزيل
+        item.type,                   // نوع المضبوطة
+        item.data                    // تفاصيل المضبوطة
       );
-      alert("تم اعتماد الفحص. النزيل الآن في قائمة الانتظار للتسكين.");
     }
+  }
 
-    // تصفير كل شيء
-    setSelectedInmateForInspection(null);
+  // 3) تسكين النزيل إن اختاروا عنبر
+  if (inspectionWardId) {
+    await assignWard(selectedInmateForInspection, inspectionWardId);
+  }
+
+  // 4) تصفير النموذج
+  setInspectionForm({
+    isPhysicallyInspected: "No",
+    physicalNotes: "",
+    belongings: [],
+    securityIntel: "",
+    documents: [],
+  });
+
+  setNewItemType("");
+  setNewItemData({});
+  setInspectionWardId("");
+  setSelectedInmateForInspection(null);
+};
+
     setInspectionForm({
       isPhysicallyInspected: "No" as any,
       physicalNotes: "",
@@ -324,7 +332,11 @@ const PrisonAdministration: React.FC<PrisonAdministrationProps> = ({
               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold"
               placeholder="مثال: عنبر 5 (أحداث)"
               value={wardForm.name}
-              onChange={(e) =>
+                setEditBelongingData({
+    ...editBelongingData,
+    weaponNumber: e.target.value,
+  })
+   }onChange={(e) =>
                 setWardForm({ ...wardForm, name: e.target.value })
               }
             />
@@ -871,7 +883,11 @@ const renderNewInmate = () => (
                 <input
                   type="text"
                   value={intakeForm.unit}
-                  onChange={(e) =>
+                    setEditBelongingData({
+    ...editBelongingData,
+    weaponNumber: e.target.value,
+  })
+   }onChange={(e) =>
                     setIntakeForm({ ...intakeForm, unit: e.target.value })
                   }
                   className="w-full p-3 bg-white border border-slate-200 rounded-xl text-slate-900"
@@ -1077,40 +1093,41 @@ const renderNewInmate = () => (
     </form>
   </div>
 );
-/* ===========================
+
+/* ===============================
         شاشة الفحص
-  =========================== */
-  const renderInspection = () => {
-    const pending = inmates.filter(
-      (i) => i.status === InmateStatus.PROCESSING
-    );
+  =============================== */
+const renderInspection = () => {
+  const pending = inmates.filter(
+    (i) => i.status === InmateStatus.PROCESSING
+  );
 
-    // لترجمة الأنواع
-    const typeLabels: any = {
-      PHONE: "جوال",
-      WEAPON: "سلاح",
-      MONEY: "مبالغ مالية",
-      DOCUMENT: "وثيقة",
-      OTHER: "أخرى",
-    };
+  const typeLabels: any = {
+    PHONE: "جوال",
+    WEAPON: "سلاح",
+    MONEY: "مبالغ مالية",
+    DOCUMENT: "وثيقة",
+    OTHER: "أخرى",
+  };
 
-    // لترجمة الحقول
-    const fieldLabels: any = {
-      phoneType: "نوع الجوال",
-      condition: "الحالة",
-      weaponType: "نوع السلاح",
-      weaponNumber: "رقم السلاح",
-      magazines: "عدد المخازن",
-      ammo: "الذخيرة بالمخازن",
-      currency: "العملة",
-      amount: "المبلغ",
-      docType: "نوع الوثيقة",
-      name: "اسم المضبوطة",
-      notes: "ملاحظات",
-    };
+  const fieldLabels: any = {
+    phoneType: "نوع الجوال",
+    condition: "الحالة",
+    weaponType: "نوع السلاح",
+    weaponNumber: "رقم السلاح",
+    magazines: "عدد المخازن",
+    ammo: "الذخيرة بالمخازن",
+    currency: "العملة",
+    amount: "المبلغ",
+    docType: "نوع الوثيقة",
+    name: "اسم المضبوطة",
+    notes: "ملاحظات",
+  };
 
-    return (
+  return (
+    <>
       <div className="space-y-6 animate-fadeIn">
+
         {/* قائمة انتظار الفحص */}
         <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-200">
           <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -1118,7 +1135,7 @@ const renderNewInmate = () => (
           </h3>
 
           {pending.length === 0 ? (
-            <p className="text-slate-500">لا يوجد نزلاء بانتظار الفحص.</p>
+            <p className="text-slate-500">لا يوجد نزلاء بانتاطر الفحص.</p>
           ) : (
             <div className="space-y-3">
               {pending.map((i) => (
@@ -1132,9 +1149,7 @@ const renderNewInmate = () => (
                   }`}
                 >
                   <div className="font-bold text-slate-800">{i.fullName}</div>
-                  <div className="text-xs text-slate-500">
-                    {i.referringAuthority}
-                  </div>
+                  <div className="text-xs text-slate-500">{i.referringAuthority}</div>
                 </div>
               ))}
             </div>
@@ -1149,11 +1164,10 @@ const renderNewInmate = () => (
             </h3>
 
             <div className="space-y-4">
+
               {/* التفتيش الجسدي */}
               <div>
-                <label className="font-bold mb-1 block">
-                  هل تم التفتيش الجسدي؟
-                </label>
+                <label className="font-bold mb-1 block">هل تم التفتيش الجسدي؟</label>
                 <select
                   value={inspectionForm.isPhysicallyInspected}
                   onChange={(e) =>
@@ -1171,9 +1185,7 @@ const renderNewInmate = () => (
 
               {/* ملاحظات التفتيش */}
               <div>
-                <label className="font-bold mb-1 block">
-                  ملاحظات التفتيش الجسدي
-                </label>
+                <label className="font-bold mb-1 block">ملاحظات التفتيش الجسدي</label>
                 <textarea
                   value={inspectionForm.physicalNotes}
                   onChange={(e) =>
@@ -1188,9 +1200,7 @@ const renderNewInmate = () => (
 
               {/* اختيار العنبر */}
               <div>
-                <label className="font-bold mb-2 block">
-                  اختيار العنبر (اختياري)
-                </label>
+                <label className="font-bold mb-2 block">اختيار العنبر (اختياري)</label>
                 <select
                   value={inspectionWardId}
                   onChange={(e) => setInspectionWardId(e.target.value)}
@@ -1206,14 +1216,12 @@ const renderNewInmate = () => (
               </div>
 
               {/* =====================
-                  المضبوطات
-              ===================== */}
+                    المضبوطات
+                  ===================== */}
               <div className="bg-white p-4 rounded-2xl border border-slate-300 mt-6">
-                <h3 className="text-lg font-bold text-slate-700 mb-3">
-                  المضبوطات
-                </h3>
+                <h3 className="text-lg font-bold text-slate-700 mb-3">المضبوطات</h3>
 
-                {/* اختيار نوع المضبوطة */}
+                {/* نوع المضبوطة */}
                 <label className="font-bold mb-1 block">نوع المضبوطة</label>
                 <select
                   value={newItemType}
@@ -1231,310 +1239,220 @@ const renderNewInmate = () => (
                   <option value="OTHER">أخرى</option>
                 </select>
 
-                {/* جوال */}
+                {/* =====================
+                    حقول المضبوطات حسب النوع
+                ===================== */}
+
                 {newItemType === "PHONE" && (
-                  <div className="space-y-4 mb-4">
-                    <div>
-                      <label className="font-bold mb-1">نوع الجوال</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            phoneType: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">الحالة</label>
-                      <select
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            condition: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">اختر...</option>
-                        <option value="سليم">سليم</option>
-                        <option value="مكسور">مكسور</option>
-                        <option value="لا يعمل">لا يعمل</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">ملاحظات</label>
-                      <textarea
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            notes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <input
+                      placeholder="نوع الجوال"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, phoneType: e.target.value })
+                      }
+                    />
+                    <select
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, condition: e.target.value })
+                      }
+                    >
+                      <option value="">الحالة</option>
+                      <option value="سليم">سليم</option>
+                      <option value="مكسور">مكسور</option>
+                      <option value="لا يعمل">لا يعمل</option>
+                    </select>
+                    <textarea
+                      placeholder="ملاحظات"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
                   </div>
                 )}
 
-                {/* سلاح */}
                 {newItemType === "WEAPON" && (
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="font-bold mb-1">نوع السلاح</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            weaponType: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">رقم السلاح</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            weaponNumber: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">عدد المخازن</label>
-                      <input
-                        type="number"
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            magazines: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">
-                        الذخيرة بالمخازن
-                      </label>
-                      <input
-                        type="number"
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            ammo: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="col-span-2">
-                      <label className="font-bold mb-1">ملاحظات</label>
-                      <textarea
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            notes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <input
+                      placeholder="نوع السلاح"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, weaponType: e.target.value })
+                      }
+                    />
+                    <input
+                      placeholder="رقم السلاح"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, weaponNumber: e.target.value })
+                      }
+                    />
+                    <input
+                      placeholder="عدد المخازن"
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, magazines: e.target.value })
+                      }
+                    />
+                    <input
+                      placeholder="الذخيرة بالمخازن"
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, ammo: e.target.value })
+                      }
+                    />
+                    <textarea
+                      placeholder="ملاحظات"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
                   </div>
                 )}
 
-                {/* مبالغ مالية */}
                 {newItemType === "MONEY" && (
-                  <div className="space-y-4 mb-4">
-                    <div>
-                      <label className="font-bold mb-1">العملة</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            currency: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">المبلغ</label>
-                      <input
-                        type="number"
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            amount: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">ملاحظات</label>
-                      <textarea
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            notes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <input
+                      placeholder="العملة"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, currency: e.target.value })
+                      }
+                    />
+                    <input
+                      placeholder="المبلغ"
+                      type="number"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, amount: e.target.value })
+                      }
+                    />
+                    <textarea
+                      placeholder="ملاحظات"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
                   </div>
                 )}
 
-                {/* وثائق */}
                 {newItemType === "DOCUMENT" && (
-                  <div className="space-y-4 mb-4">
-                    <div>
-                      <label className="font-bold mb-1">نوع الوثيقة</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            docType: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">ملاحظات</label>
-                      <textarea
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            notes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <input
+                      placeholder="نوع الوثيقة"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, docType: e.target.value })
+                      }
+                    />
+                    <textarea
+                      placeholder="ملاحظات"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
                   </div>
                 )}
 
-                {/* أخرى */}
                 {newItemType === "OTHER" && (
-                  <div className="space-y-4 mb-4">
-                    <div>
-                      <label className="font-bold mb-1">اسم المضبوطة</label>
-                      <input
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            name: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="font-bold mb-1">ملاحظات</label>
-                      <textarea
-                        className="border p-2 rounded-xl w-full"
-                        onChange={(e) =>
-                          setNewItemData({
-                            ...newItemData,
-                            notes: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    <input
+                      placeholder="اسم المضبوطة"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, name: e.target.value })
+                      }
+                    />
+                    <textarea
+                      placeholder="ملاحظات"
+                      className="border p-2 rounded-xl w-full"
+                      onChange={(e) =>
+                        setNewItemData({ ...newItemData, notes: e.target.value })
+                      }
+                    />
                   </div>
                 )}
 
-                {/* زر إضافة المضبوطة */}
+                {/* زر الإضافة */}
                 <button
                   type="button"
                   onClick={() => {
-                    if (!newItemType) {
-                      alert("اختر نوع المضبوطة أولاً");
-                      return;
-                    }
+                    if (!newItemType) return alert("اختر نوع المضبوطة");
 
-                    const newItem = {
+                    const item = {
                       id: Math.random().toString(36).substring(2, 9),
                       type: newItemType,
                       data: newItemData,
                     };
 
-                    const updated = [
-                      ...(inspectionForm.belongings || []),
-                      newItem,
-                    ];
-
                     setInspectionForm({
                       ...inspectionForm,
-                      belongings: updated,
+                      belongings: [...(inspectionForm.belongings || []), item],
                     });
 
                     setNewItemType("");
                     setNewItemData({});
                   }}
-                  className="w-full py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 mt-4"
+                  className="w-full mt-4 py-2 rounded-xl bg-primary-600 text-white font-bold"
                 >
                   إضافة المضبوطة
                 </button>
 
                 {/* عرض المضبوطات */}
-                {inspectionForm.belongings &&
-                  inspectionForm.belongings.length > 0 && (
-                    <div className="mt-6 space-y-3">
-                      {inspectionForm.belongings.map((item: any, index) => (
-                        <div
-                          key={item.id}
-                          className="p-4 border rounded-xl bg-slate-50"
-                        >
-                          <div className="text-lg font-bold text-primary-700 mb-1">
+                {(inspectionForm.belongings || []).length > 0 &&
+                  inspectionForm.belongings!.map((item: any, index) => (
+                    <div key={item.id} className="p-4 mt-4 bg-slate-50 border rounded-xl">
+                      <div className="flex justify-between">
+                        <div>
+                          <div className="font-bold text-primary-700 text-lg">
                             {typeLabels[item.type]}
                           </div>
-                          <div className="text-sm text-slate-700 space-y-1">
+
+                          <div className="text-sm text-slate-600 space-y-1">
                             {Object.entries(item.data).map(([k, v]) => (
                               <div key={k}>
-                                <span className="font-bold">
-                                  {fieldLabels[k]}:
-                                </span>{" "}
-                                {v as any}
+                                <strong>{fieldLabels[k]}:</strong> {v as any}
                               </div>
                             ))}
                           </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
                           <button
                             onClick={() => {
-                              const updated =
-                                inspectionForm.belongings?.filter(
-                                  (_: any, i: number) => i !== index
-                                ) || [];
+                              setEditingBelongingIndex(index);
+                              setEditBelongingType(item.type);
+                              setEditBelongingData({ ...item.data });
+                            }}
+                            className="text-blue-600 font-bold"
+                          >
+                            تعديل
+                          </button>
+
+                          <button
+                            onClick={() => {
                               setInspectionForm({
                                 ...inspectionForm,
-                                belongings: updated,
+                                belongings: inspectionForm.belongings!.filter(
+                                  (_: any, i: number) => i !== index
+                                ),
                               });
                             }}
-                            className="text-red-600 font-bold mt-2"
+                            className="text-red-600 font-bold"
                           >
                             حذف
                           </button>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                  ))}
               </div>
 
               {/* زر اعتماد الفحص */}
@@ -1548,170 +1466,436 @@ const renderNewInmate = () => (
           </div>
         )}
       </div>
-    );
-  };
 
-  /* ===============================
+      {/* =============================
+            نافذة تعديل المضبوطات
+      ============================== */}
+      {editingBelongingIndex !== null && (
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800">
+                تعديل المضبوطة — {typeLabels[editBelongingType]}
+              </h3>
+
+              <button
+                onClick={() => {
+                  setEditingBelongingIndex(null);
+                  setEditBelongingType("");
+                  setEditBelongingData({});
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-4">
+              
+              {/* PHONE */}
+              {editBelongingType === "PHONE" && (
+                <div className="space-y-3">
+                  <input
+                    placeholder="نوع الجوال"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.phoneType || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        phoneType: e.target.value,
+                      })
+                    }
+                  />
+                  <select
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.condition || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        condition: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">اختر الحالة</option>
+                    <option value="سليم">سليم</option>
+                    <option value="مكسور">مكسور</option>
+                    <option value="لا يعمل">لا يعمل</option>
+                  </select>
+                  <textarea
+                    placeholder="ملاحظات"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.notes || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* WEAPON */}
+              {editBelongingType === "WEAPON" && (
+                <div className="space-y-3">
+                  <input
+                    placeholder="نوع السلاح"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.weaponType || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        weaponType: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    placeholder="رقم السلاح"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.weaponNumber || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        weaponNumber: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    placeholder="عدد المخازن"
+                    type="number"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.magazines || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        magazines: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    placeholder="الذخيرة"
+                    type="number"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.ammo || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        ammo: e.target.value,
+                      })
+                    }
+                  />
+                  <textarea
+                    placeholder="ملاحظات"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.notes || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* MONEY */}
+              {editBelongingType === "MONEY" && (
+                <div className="space-y-3">
+                  <input
+                    placeholder="العملة"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.currency || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        currency: e.target.value,
+                      })
+                    }
+                  />
+                  <input
+                    placeholder="المبلغ"
+                    type="number"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.amount || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        amount: e.target.value,
+                      })
+                    }
+                  />
+                  <textarea
+                    placeholder="ملاحظات"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.notes || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* DOCUMENT */}
+              {editBelongingType === "DOCUMENT" && (
+                <div className="space-y-3">
+                  <input
+                    placeholder="نوع الوثيقة"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.docType || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        docType: e.target.value,
+                      })
+                    }
+                  />
+                  <textarea
+                    placeholder="ملاحظات"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.notes || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+
+              {/* OTHER */}
+              {editBelongingType === "OTHER" && (
+                <div className="space-y-3">
+                  <input
+                    placeholder="اسم المضبوطة"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.name || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        name: e.target.value,
+                      })
+                    }
+                  />
+                  <textarea
+                    placeholder="ملاحظات"
+                    className="border p-2 rounded-xl w-full"
+                    value={editBelongingData.notes || ""}
+                    onChange={(e) =>
+                      setEditBelongingData({
+                        ...editBelongingData,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* أزرار الحفظ */}
+            <div className="px-5 py-4 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => {
+                  setEditingBelongingIndex(null);
+                  setEditBelongingType("");
+                  setEditBelongingData({});
+                }}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold"
+              >
+                إلغاء
+              </button>
+
+              <button
+                onClick={() => {
+                  const updated = inspectionForm.belongings!.map(
+                    (bel, idx) =>
+                      idx === editingBelongingIndex
+                        ? { ...bel, data: editBelongingData }
+                        : bel
+                  );
+
+                  setInspectionForm({
+                    ...inspectionForm,
+                    belongings: updated,
+                  });
+
+                  setEditingBelongingIndex(null);
+                  setEditBelongingType("");
+                  setEditBelongingData({});
+                }}
+                className="flex-1 py-2 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700"
+              >
+                حفظ التعديل
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+/* ===============================
         شاشة التسكين
   =============================== */
-  const renderHousing = () => {
-    const ready = inmates.filter(
-      (i) => i.status === InmateStatus.READY_FOR_HOUSING
-    );
-
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        {/* قائمة انتظار التسكين */}
-        <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
-          <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
-            <FileBadge size={18} /> قائمة انتظار التسكين
-          </h3>
-
-          {ready.length === 0 ? (
-            <p className="text-slate-500 text-sm">
-              لا يوجد نزلاء بانتظار التسكين.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {ready.map((i) => (
-                <div
-                  key={i.id}
-                  onClick={() => setSelectedInmateForHousing(i.id)}
-                  className={`p-4 rounded-2xl border cursor-pointer transition ${
-                    selectedInmateForHousing === i.id
-                      ? "border-primary-500 bg-primary-50"
-                      : "border-slate-200 bg-slate-50"
-                  }`}
-                >
-                  <div className="font-bold text-slate-800">{i.fullName}</div>
-                  <div className="text-sm text-slate-500">
-                    {i.status === InmateStatus.READY_FOR_HOUSING
-                      ? "جاهز للتسكين – تم الفحص"
-                      : "بانتظار استكمال التسكين"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* اختيار العنبر */}
-        <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
-            <Building size={18} /> اختيار العنبر
-          </h3>
-          <select
-            value={selectedWardId}
-            onChange={(e) => setSelectedWardId(e.target.value)}
-            className="w-full border border-slate-300 rounded-2xl px-4 py-2 text-sm mb-4"
-          >
-            <option value="">اختر العنبر...</option>
-            {wards.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} — سعة {w.capacity}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleAssignWardFromHousing}
-            disabled={!selectedInmateForHousing || !selectedWardId}
-            className={`w-full px-4 py-3 rounded-2xl text-white font-bold shadow ${
-              selectedInmateForHousing && selectedWardId
-                ? "bg-primary-600 hover:bg-primary-700"
-                : "bg-slate-300 cursor-not-allowed"
-            }`}
-          >
-            تسكين النزيل
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  /* ===============================
-        شاشة الحركة
-  =============================== */
-  const renderMovements = () => (
-    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-        <ArrowLeft size={20} /> حركة النزلاء
-      </h3>
-      <MovementsManager onShowProfile={onShowProfile} />
-    </div>
+const renderHousing = () => {
+  const ready = inmates.filter(
+    (i) => i.status === InmateStatus.READY_FOR_HOUSING
   );
-
-  /* ===============================
-        شاشة الزيارات
-  =============================== */
-  const renderVisits = () => (
-    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-        <FileBadge size={20} /> الزيارات
-      </h3>
-      <VisitManager />
-    </div>
-  );
-
-  /* ===============================
-        شاشة بيانات النزلاء
-  =============================== */
-  const renderInmateData = () => (
-    <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
-      <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-        <FileBadge size={20} /> بيانات النزلاء
-      </h3>
-      <InmateManager onShowProfile={onShowProfile} />
-    </div>
-  );
-
-  /* ===============================
-        التبويبات الرئيسية
-  =============================== */
-  if (currentView === "MOVEMENTS") return renderMovements();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
-        {[
-          { id: "NEW_INMATE", label: "تسجيل نزيل", icon: UserPlus },
-          { id: "INSPECTION", label: "الفحص والتفتيش", icon: Scan },
-          { id: "HOUSING", label: "التسكين", icon: Building },
-          {
-            id: "INMATE_DATA",
-            label: "سجل بيانات النزلاء",
-            icon: FileBadge,
-          },
-          { id: "VISITS", label: "الزيارات", icon: FileBadge },
-          { id: "WARD_SETUP", label: "تهيئة العنابر", icon: Layout },
-          { id: "MOVEMENTS", label: "الحركة", icon: ArrowLeft },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setCurrentView(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
-              currentView === tab.id
-                ? "border-primary-600 text-primary-700 bg-primary-50/50"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <tab.icon size={18} />
-            {tab.label}
-          </button>
-        ))}
+    <div className="space-y-6 animate-fadeIn">
+
+      {/* قائمة انتظار التسكين */}
+      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+        <h3 className="text-xl font-bold mb-4 text-slate-800 flex items-center gap-2">
+          <FileBadge size={18} /> قائمة انتظار التسكين
+        </h3>
+
+        {ready.length === 0 ? (
+          <p className="text-slate-500 text-sm">لا يوجد نزلاء بانتظار التسكين.</p>
+        ) : (
+          <div className="space-y-3">
+            {ready.map((i) => (
+              <div
+                key={i.id}
+                onClick={() => setSelectedInmateForHousing(i.id)}
+                className={`p-4 rounded-2xl border cursor-pointer transition ${
+                  selectedInmateForHousing === i.id
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                <div className="font-bold text-slate-800">{i.fullName}</div>
+                <div className="text-sm text-slate-500">
+                  {i.status === InmateStatus.READY_FOR_HOUSING
+                    ? "جاهز للتسكين – تم الفحص"
+                    : "بانتظار استكمال التسكين"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* المحتوى */}
-      <div className="animate-fadeIn">
-        {currentView === "NEW_INMATE" && renderNewInmate()}
-        {currentView === "INSPECTION" && renderInspection()}
-        {currentView === "HOUSING" && renderHousing()}
-        {currentView === "INMATE_DATA" && renderInmateData()}
-        {currentView === "VISITS" && renderVisits()}
-        {currentView === "WARD_SETUP" && renderWardSetup()}
+      {/* اختيار العنبر */}
+      <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-200">
+        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+          <Building size={18} /> اختيار العنبر
+        </h3>
+
+        <select
+          value={selectedWardId}
+          onChange={(e) => setSelectedWardId(e.target.value)}
+          className="w-full border border-slate-300 rounded-2xl px-4 py-2 text-sm mb-4"
+        >
+          <option value="">اختر العنبر...</option>
+          {wards.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.name} — سعة {w.capacity}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={handleAssignWardFromHousing}
+          disabled={!selectedInmateForHousing || !selectedWardId}
+          className={`w-full px-4 py-3 rounded-2xl text-white font-bold shadow ${
+            selectedInmateForHousing && selectedWardId
+              ? "bg-primary-600 hover:bg-primary-700"
+              : "bg-slate-300 cursor-not-allowed"
+          }`}
+        >
+          تسكين النزيل
+        </button>
       </div>
     </div>
   );
+};
+
+/* ===============================
+        شاشة الحركة
+  =============================== */
+const renderMovements = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <ArrowLeft size={20} /> حركة النزلاء
+    </h3>
+    <MovementsManager onShowProfile={onShowProfile} />
+  </div>
+);
+
+/* ===============================
+        شاشة الزيارات
+  =============================== */
+const renderVisits = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <FileBadge size={20} /> الزيارات
+    </h3>
+    <VisitManager />
+  </div>
+);
+
+/* ===============================
+        شاشة بيانات النزلاء
+  =============================== */
+const renderInmateData = () => (
+  <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8 animate-fadeIn">
+    <h3 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+      <FileBadge size={20} /> بيانات النزلاء
+    </h3>
+    <InmateManager onShowProfile={onShowProfile} />
+  </div>
+);
+
+/* ===============================
+        التبويبات الرئيسية
+  =============================== */
+return (
+  <div className="space-y-6">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide border-b border-slate-200">
+      {[
+        { id: "NEW_INMATE", label: "تسجيل نزيل", icon: UserPlus },
+        { id: "INSPECTION", label: "الفحص والتفتيش", icon: Scan },
+        { id: "HOUSING", label: "التسكين", icon: Building },
+        { id: "INMATE_DATA", label: "سجل بيانات النزلاء", icon: FileBadge },
+        { id: "VISITS", label: "الزيارات", icon: FileBadge },
+        { id: "WARD_SETUP", label: "تهيئة العنابر", icon: Layout },
+        { id: "MOVEMENTS", label: "الحركة", icon: ArrowLeft },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => setCurrentView(tab.id)}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 ${
+            currentView === tab.id
+              ? "border-primary-600 text-primary-700 bg-primary-50/50"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <tab.icon size={18} />
+          {tab.label}
+        </button>
+      ))}
+    </div>
+
+    {/* المحتوى */}
+    <div className="animate-fadeIn">
+      {currentView === "NEW_INMATE" && renderNewInmate()}
+      {currentView === "INSPECTION" && renderInspection()}
+      {currentView === "HOUSING" && renderHousing()}
+      {currentView === "INMATE_DATA" && renderInmateData()}
+      {currentView === "VISITS" && renderVisits()}
+      {currentView === "WARD_SETUP" && renderWardSetup()}
+      {currentView === "MOVEMENTS" && renderMovements()}
+    </div>
+  </div>
+);
+
 };
 
 export default PrisonAdministration;

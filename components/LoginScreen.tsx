@@ -3,8 +3,10 @@ import { Lock, User, HelpCircle } from "lucide-react";
 import { useSecurity } from "../context/SecurityContext";
 import logo from "../src/assets/logo.png";
 import "../src/index.css";
+import { useToast } from '../src/context/ToastContext';
 const LoginScreen: React.FC = () => {
   const { login } = useSecurity();
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);

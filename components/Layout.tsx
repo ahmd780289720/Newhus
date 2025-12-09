@@ -313,19 +313,17 @@ useEffect(() => {
   </button>
 
   {/* زر الخروج الصحيح */}
-  <button
-    onClick={() => {
-      logout(); // تسجيل خروج
-      if (typeof App !== "undefined") {
-        App.exitApp();
-      } else {
-        window.close();
-      }
-    }}
-    className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
-  >
-    خروج
-  </button>
+<button
+  onClick={() => {
+    logout(); // تسجيل خروج
+    CapacitorApp.exitApp(); // الخروج الصحيح
+  }}
+  className="px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700"
+>
+  خروج
+</button>
+
+
 
 </div>
 
