@@ -3,7 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
-  ReactNode
+  ReactNode,
 } from "react";
 
 import {
@@ -26,27 +26,84 @@ import {
 
 import {
   SQLiteService,
-  CollectionKey
+  CollectionKey,
 } from "../src/database/SQLiteService";
 
 // ======================================================
-// 🔥 1) حذف loadFromStorage — لأننا لا نستخدم localStorage إطلاقًا
+// ✅ تعريف نوع الكونتكست – كامل بكل الدوال
 // ======================================================
+interface SecurityContextType {
+  // Auth
+  currentUser: User | null;
+  users: User[];
+  login: (name: string, password: string) => boolean;
+  logout: () => void;
+  addUser: (user: User) => void;
+  updateUser: (user: User) => void;
+  deleteUser: (userId: string) => void;
+
+  // Data
+  inmates: Inmate[];
+  inspections: InspectionRecord[];
+  wards: Ward[];
+  cases: Case[];
+  minutes: InvestigationMinute[];
+  wantedPersons: WantedPerson[];
+  movements: Movement[];
+  visits: Visit[];
+  reports: BehaviorReport[];
+  auditLogs: AuditLog[];
+  departments: Department[];
+  favorites: FavoriteItem[];
+
+  // Inmates
+  addInmate: (inmate: Inmate) => void;
+  updateInmate: (inmate: Inmate) => void;
+  deleteInmate: (inmateId: string) => void;
+
+  // Inspection
+  addInspection: (inspection: InspectionRecord) => void;
+  updateInmateStatus: (id: string, status: InmateStatus) => void;
+
+  // Wards
+  assignWard: (inmateId: string, wardId: string) => void;
+  addWard: (ward: Ward) => void;
+
+  // Investigation
+  addCase: (newCase: Case) => void;
+  addMinute: (minute: InvestigationMinute) => void;
+
+  // Wanted
+  addWantedPerson: (person: WantedPerson) => void;
+  updateWantedPersonStatus: (id: string, status: WantedPerson["status"]) => void;
+  deleteWantedPerson: (id: string) => void;
+
+  // Movements
+  addMovement: (movement: Movement) => void;
+  updateMovement: (movement: Movement) => void;
+
+  // Visits
+  addVisit: (visit: Visit) => void;
+  updateVisit: (visit: Visit) => void;
+  deleteVisit: (id: string) => void;
+
+  // Favorites
+  addFavorite: (item: FavoriteItem) => void;
+  removeFavorite: (id: string) => void;
+
+  // System / Backup
+  createBackup: () => void;
+  parseBackupFile: (file: File) => Promise<any>;
+  restoreData: (data: any) => void;
+  resetSystem: () => void;
+  requestPersistentStorage: () => Promise<boolean>;
+
+  // Dev Console
+  updateRawData: (key: CollectionKey, data: any[]) => void;
+}
 
 // ======================================================
-// 🔥 2) تعديل saveToStorage — الآن يخزن في SQLite فقط
-// ======================================================
-const saveToStorage = async (key: CollectionKey, data: any) => {
-  try {
-    await SQLiteService.upsertCollection(key, data);
-  } catch (err) {
-    console.error("SQLite Save Error:", err);
-    alert("خطأ في حفظ البيانات داخل SQLite!");
-  }
-};
-
-// ======================================================
-// 🔥 3) مستخدم افتراضي
+// ✅ مستخدم افتراضي
 // ======================================================
 const DEFAULT_ADMIN_USER: User = {
   id: "admin",
@@ -59,16 +116,31 @@ const DEFAULT_ADMIN_USER: User = {
 };
 
 // ======================================================
-const SecurityContext = createContext<any>(undefined);
-export const SecurityProvider = ({ children }: { children: ReactNode }) => {
-  // Users
+// ✅ التخزين – الآن SQLite فقط (لا localStorage)
+// ======================================================
+const saveToStorage = (key: CollectionKey, data: any) => {
+  // نحفظ في SQLite كمصدر أساسي
+  SQLiteService.upsertCollection(key, data).catch((err) => {
+    console.error("SQLite Save Error:", err);
+    alert("خطأ في حفظ البيانات داخل SQLite!");
+  });
+};
+
+const SecurityContext = createContext<SecurityContextType | undefined>(
+  undefined
+);
+
+export const SecurityProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  // Auth
   const [users, setUsers] = useState<User[]>([DEFAULT_ADMIN_USER]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // System Logs
+  // Logs
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
-  // Main App Data
+  // Main Data
   const [inmates, setInmates] = useState<Inmate[]>([]);
   const [inspections, setInspections] = useState<InspectionRecord[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
@@ -79,8 +151,9 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
   const [visits, setVisits] = useState<Visit[]>([]);
   const [reports, setReports] = useState<BehaviorReport[]>([]);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+
   // ======================================================
-  // 🔥 تحميل البيانات من SQLite عند بدء تشغيل النظام
+  // ✅ تحميل البيانات من SQLite عند تشغيل النظام
   // ======================================================
   useEffect(() => {
     (async () => {
@@ -115,23 +188,21 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
             []
           ),
           SQLiteService.getCollection<WantedPerson>("sec_sys_wanted", []),
-          SQLiteService.getCollection<Movement>(
-            "sec_sys_movements",
-            []
-          ),
+          SQLiteService.getCollection<Movement>("sec_sys_movements", []),
           SQLiteService.getCollection<Visit>("sec_sys_visits", []),
-          SQLiteService.getCollection<BehaviorReport>(
-            "sec_sys_reports",
-            []
-          ),
+          SQLiteService.getCollection<BehaviorReport>("sec_sys_reports", []),
           SQLiteService.getCollection<AuditLog>("sec_sys_logs", []),
-          SQLiteService.getCollection<FavoriteItem>(
-            "sec_sys_favorites",
-            []
-          ),
+          SQLiteService.getCollection<FavoriteItem>("sec_sys_favorites", []),
         ]);
 
-        setUsers(usersFromDb);
+        // لو ما فيه ولا مستخدم – نضيف الأدمن ونحفظه
+        if (!usersFromDb || usersFromDb.length === 0) {
+          setUsers([DEFAULT_ADMIN_USER]);
+          saveToStorage("sec_sys_users_list", [DEFAULT_ADMIN_USER]);
+        } else {
+          setUsers(usersFromDb);
+        }
+
         setInmates(inmatesFromDb);
         setInspections(inspectionsFromDb);
         setWards(wardsFromDb);
@@ -143,127 +214,487 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
         setReports(reportsFromDb);
         setAuditLogs(logsFromDb);
         setFavorites(favoritesFromDb);
-
       } catch (err) {
         console.error("Initial SQLite Load Error:", err);
-        alert("تعذر تحميل البيانات من قاعدة البيانات!");
+        alert("تعذر تحميل البيانات من قاعدة SQLite!");
       }
     })();
   }, []);
-  // تسجيل الدخول
+
+  // ======================================================
+  // ✅ الطلب من المتصفح حفظ البيانات (Storage Persist)
+  // ======================================================
+  const requestPersistentStorage = async (): Promise<boolean> => {
+    if (navigator.storage && navigator.storage.persist) {
+      try {
+        return await navigator.storage.persist();
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  };
+
+  // ======================================================
+  // ✅ سجل العمليات (Audit Log)
+  // ======================================================
+  const logAction = (action: AuditLog["action"], target: string) => {
+    if (!currentUser) return;
+    const newLog: AuditLog = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action,
+      target,
+      timestamp: new Date().toISOString(),
+    };
+
+    setAuditLogs((prev) => {
+      const updated = [newLog, ...prev];
+      saveToStorage("sec_sys_logs", updated);
+      return updated;
+    });
+  };
+
+  // ======================================================
+  // ✅ Auth
+  // ======================================================
   const login = (name: string, password: string): boolean => {
     const user = users.find(
       (u) => u.name === name && u.password === password
     );
     if (user) {
       setCurrentUser(user);
+      logAction("LOGIN", "تم تسجيل الدخول");
       return true;
     }
     return false;
   };
 
-  const logout = () => setCurrentUser(null);
+  const logout = () => {
+    logAction("LOGOUT", "تم تسجيل الخروج");
+    setCurrentUser(null);
+  };
 
   // ======================================================
-  // 🔥 وظائف CRUD — كلها تكتب SQLite فقط
+  // ✅ Users
   // ======================================================
-
-  const addUser = async (user: User) => {
-    const updated = [...users, user];
-    setUsers(updated);
-    await saveToStorage("sec_sys_users_list", updated);
+  const addUser = (user: User) => {
+    setUsers((prev) => {
+      const updated = [...prev, user];
+      saveToStorage("sec_sys_users_list", updated);
+      return updated;
+    });
+    logAction("CREATE", `إضافة مستخدم جديد: ${user.name}`);
   };
 
-  const updateUser = async (user: User) => {
-    const updated = users.map((u) => (u.id === user.id ? user : u));
-    setUsers(updated);
-    await saveToStorage("sec_sys_users_list", updated);
+  const updateUser = (user: User) => {
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === user.id ? user : u));
+      saveToStorage("sec_sys_users_list", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تعديل بيانات المستخدم: ${user.name}`);
   };
 
-  const deleteUser = async (id: string) => {
-    const updated = users.filter((u) => u.id !== id);
-    setUsers(updated);
-    await saveToStorage("sec_sys_users_list", updated);
+  const deleteUser = (userId: string) => {
+    setUsers((prev) => {
+      const user = prev.find((u) => u.id === userId);
+      const updated = prev.filter((u) => u.id !== userId);
+      saveToStorage("sec_sys_users_list", updated);
+      if (user) {
+        logAction("DELETE", `حذف المستخدم: ${user.name}`);
+      }
+      return updated;
+    });
   };
 
-  // --------------------------
-  // 🟦 النزلاء
-  // --------------------------
-  const addInmate = async (inmate: Inmate) => {
-    const updated = [...inmates, inmate];
-    setInmates(updated);
-    await saveToStorage("sec_sys_inmates", updated);
+  // ======================================================
+  // ✅ Inmates
+  // ======================================================
+  const addInmate = (inmate: Inmate) => {
+    setInmates((prev) => {
+      const updated = [...prev, inmate];
+      saveToStorage("sec_sys_inmates", updated);
+      return updated;
+    });
+    logAction("CREATE", `إضافة نزيل: ${inmate.fullName}`);
   };
 
-  const updateInmate = async (inmate: Inmate) => {
-    const updated = inmates.map((i) => (i.id === inmate.id ? inmate : i));
-    setInmates(updated);
-    await saveToStorage("sec_sys_inmates", updated);
+  const updateInmate = (inmate: Inmate) => {
+    setInmates((prev) => {
+      const updated = prev.map((i) => (i.id === inmate.id ? inmate : i));
+      saveToStorage("sec_sys_inmates", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تعديل بيانات النزيل: ${inmate.fullName}`);
   };
 
-  const deleteInmate = async (id: string) => {
-    const updated = inmates.filter((i) => i.id !== id);
-    setInmates(updated);
-    await saveToStorage("sec_sys_inmates", updated);
+  const deleteInmate = (inmateId: string) => {
+    setInmates((prev) => {
+      const inmate = prev.find((i) => i.id === inmateId);
+      const updated = prev.filter((i) => i.id !== inmateId);
+      saveToStorage("sec_sys_inmates", updated);
+      if (inmate) {
+        logAction("DELETE", `حذف النزيل: ${inmate.fullName}`);
+      }
+      return updated;
+    });
   };
 
-  // --------------------------
-  // 🟦 التفتيش
-  // --------------------------
-  const addInspection = async (rec: InspectionRecord) => {
-    const updated = [...inspections, rec];
-    setInspections(updated);
-    await saveToStorage("sec_sys_inspections", updated);
+  // ======================================================
+  // ✅ Inspection
+  // ======================================================
+  const addInspection = (inspection: InspectionRecord) => {
+    setInspections((prev) => {
+      const updated = [...prev, inspection];
+      saveToStorage("sec_sys_inspections", updated);
+      return updated;
+    });
+    logAction("CREATE", `تسجيل تفتيش بتاريخ ${inspection.date}`);
   };
 
-  const updateInmateStatus = async (id: string, status: InmateStatus) => {
-    const updated = inmates.map((i) =>
-      i.id === id ? { ...i, status } : i
-    );
-    setInmates(updated);
-    await saveToStorage("sec_sys_inmates", updated);
+  const updateInmateStatus = (id: string, status: InmateStatus) => {
+    setInmates((prev) => {
+      const updated = prev.map((i) => (i.id === id ? { ...i, status } : i));
+      saveToStorage("sec_sys_inmates", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تغيير حالة النزيل رقم: ${id} إلى ${status}`);
   };
 
-  // --------------------------
-  // 🟦 العنابر
-  // --------------------------
-  const assignWard = async (inmateId: string, wardId: string) => {
-    const updated = inmates.map((i) =>
-      i.id === inmateId ? { ...i, wardId } : i
-    );
-    setInmates(updated);
-    await saveToStorage("sec_sys_inmates", updated);
+  // ======================================================
+  // ✅ Wards
+  // ======================================================
+  const assignWard = (inmateId: string, wardId: string) => {
+    setInmates((prev) => {
+      const updated = prev.map((i) =>
+        i.id === inmateId ? { ...i, wardId } : i
+      );
+      saveToStorage("sec_sys_inmates", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تخصيص عنبر للنزيل رقم: ${inmateId}`);
   };
 
-  const addWard = async (ward: Ward) => {
-    const updated = [...wards, ward];
-    setWards(updated);
-    await saveToStorage("sec_sys_wards", updated);
+  const addWard = (ward: Ward) => {
+    setWards((prev) => {
+      const updated = [...prev, ward];
+      saveToStorage("sec_sys_wards", updated);
+      return updated;
+    });
+    logAction("CREATE", `إضافة عنبر: ${ward.name}`);
   };
 
-  // --------------------------
-  // 🟦 الزيارات
-  // --------------------------
-  const addVisit = async (v: Visit) => {
-    const updated = [...visits, v];
-    setVisits(updated);
-    await saveToStorage("sec_sys_visits", updated);
+  // ======================================================
+  // ✅ Investigation (Cases + Minutes)
+// ======================================================
+  const addCase = (newCase: Case) => {
+    setCases((prev) => {
+      const updated = [...prev, newCase];
+      saveToStorage("sec_sys_cases", updated);
+      return updated;
+    });
+    logAction("CREATE", `تسجيل قضية جديدة للنزيل: ${newCase.inmateId}`);
   };
 
-  const updateVisit = async (visit: Visit) => {
-    const updated = visits.map((v) =>
-      v.id === visit.id ? visit : v
-    );
-    setVisits(updated);
-    await saveToStorage("sec_sys_visits", updated);
+  const addMinute = (minute: InvestigationMinute) => {
+    setMinutes((prev) => {
+      const updated = [...prev, minute];
+      saveToStorage("sec_sys_minutes", updated);
+      return updated;
+    });
+    logAction("CREATE", `إضافة محضر تحقيق رقم: ${minute.id}`);
   };
 
-  const deleteVisit = async (id: string) => {
-    const updated = visits.filter((v) => v.id !== id);
-    setVisits(updated);
-    await saveToStorage("sec_sys_visits", updated);
+  // ======================================================
+  // ✅ Wanted Persons
+  // ======================================================
+  const addWantedPerson = (person: WantedPerson) => {
+    setWantedPersons((prev) => {
+      const updated = [...prev, person];
+      saveToStorage("sec_sys_wanted", updated);
+      return updated;
+    });
+    logAction("CREATE", `إضافة مطلوب أمني: ${person.name}`);
   };
 
+  const updateWantedPersonStatus = (
+    id: string,
+    status: WantedPerson["status"]
+  ) => {
+    setWantedPersons((prev) => {
+      const updated = prev.map((p) =>
+        p.id === id ? { ...p, status } : p
+      );
+      saveToStorage("sec_sys_wanted", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تغيير حالة المطلوب رقم: ${id} إلى ${status}`);
+  };
+
+  const deleteWantedPerson = (id: string) => {
+    setWantedPersons((prev) => {
+      const person = prev.find((p) => p.id === id);
+      const updated = prev.filter((p) => p.id !== id);
+      saveToStorage("sec_sys_wanted", updated);
+      if (person) {
+        logAction("DELETE", `حذف المطلوب الأمني: ${person.name}`);
+      }
+      return updated;
+    });
+  };
+
+  // ======================================================
+  // ✅ Movements
+  // ======================================================
+  const addMovement = (movement: Movement) => {
+    setMovements((prev) => {
+      const updated = [...prev, movement];
+      saveToStorage("sec_sys_movements", updated);
+      return updated;
+    });
+    logAction("CREATE", `تسجيل حركة للنزيل رقم: ${movement.inmateId}`);
+  };
+
+  const updateMovement = (movement: Movement) => {
+    setMovements((prev) => {
+      const updated = prev.map((m) =>
+        m.id === movement.id ? movement : m
+      );
+      saveToStorage("sec_sys_movements", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تعديل حركة للنزيل رقم: ${movement.inmateId}`);
+  };
+
+  // ======================================================
+  // ✅ Visits
+  // ======================================================
+  const addVisit = (visit: Visit) => {
+    setVisits((prev) => {
+      const updated = [...prev, visit];
+      saveToStorage("sec_sys_visits", updated);
+      return updated;
+    });
+    logAction("CREATE", `تسجيل زيارة للنزيل: ${visit.inmateName}`);
+  };
+
+  const updateVisit = (visit: Visit) => {
+    setVisits((prev) => {
+      const updated = prev.map((v) =>
+        v.id === visit.id ? visit : v
+      );
+      saveToStorage("sec_sys_visits", updated);
+      return updated;
+    });
+    logAction("UPDATE", `تعديل زيارة للنزيل: ${visit.inmateName}`);
+  };
+
+  const deleteVisit = (id: string) => {
+    setVisits((prev) => {
+      const visit = prev.find((v) => v.id === id);
+      const updated = prev.filter((v) => v.id !== id);
+      saveToStorage("sec_sys_visits", updated);
+      if (visit) {
+        logAction("DELETE", `حذف زيارة للنزيل: ${visit.inmateName}`);
+      }
+      return updated;
+    });
+  };
+
+  // ======================================================
+  // ✅ Behavior Reports (لو كنت تستخدمها من قبل)
+// ======================================================
+  const addFavorite = (item: FavoriteItem) => {
+    setFavorites((prev) => {
+      const updated = [...prev, item];
+      saveToStorage("sec_sys_favorites", updated);
+      return updated;
+    });
+  };
+
+  const removeFavorite = (id: string) => {
+    setFavorites((prev) => {
+      const updated = prev.filter((f) => f.id !== id);
+      saveToStorage("sec_sys_favorites", updated);
+      return updated;
+    });
+  };
+
+  // ======================================================
+  // ✅ Backup / Restore
+  // ======================================================
+  const createBackup = () => {
+    const data = {
+      users,
+      inmates,
+      inspections,
+      wards,
+      cases,
+      minutes,
+      wantedPersons,
+      movements,
+      visits,
+      reports,
+      auditLogs,
+      favorites,
+      version: 1,
+      createdAt: new Date().toISOString(),
+    };
+
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `security_system_backup_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    alert("تم إنشاء نسخة احتياطية بنجاح");
+  };
+
+  const parseBackupFile = async (file: File): Promise<any> => {
+    const text = await file.text();
+    try {
+      const data = JSON.parse(text);
+      return data;
+    } catch (e) {
+      alert("ملف النسخة الاحتياطية غير صالح");
+      throw e;
+    }
+  };
+
+  const restoreData = (data: any) => {
+    if (
+      !window.confirm(
+        "سيتم استبدال كل البيانات الحالية بالنسخة الاحتياطية، هل أنت متأكد؟"
+      )
+    ) {
+      return;
+    }
+
+    setUsers(data.users || []);
+    setInmates(data.inmates || []);
+    setInspections(data.inspections || []);
+    setWards(data.wards || []);
+    setCases(data.cases || []);
+    setMinutes(data.minutes || []);
+    setWantedPersons(data.wantedPersons || []);
+    setMovements(data.movements || []);
+    setVisits(data.visits || []);
+    setReports(data.reports || []);
+    setAuditLogs(data.auditLogs || []);
+    setFavorites(data.favorites || []);
+
+    saveToStorage("sec_sys_users_list", data.users || []);
+    saveToStorage("sec_sys_inmates", data.inmates || []);
+    saveToStorage("sec_sys_inspections", data.inspections || []);
+    saveToStorage("sec_sys_wards", data.wards || []);
+    saveToStorage("sec_sys_cases", data.cases || []);
+    saveToStorage("sec_sys_minutes", data.minutes || []);
+    saveToStorage("sec_sys_wanted", data.wantedPersons || []);
+    saveToStorage("sec_sys_movements", data.movements || []);
+    saveToStorage("sec_sys_visits", data.visits || []);
+    saveToStorage("sec_sys_reports", data.reports || []);
+    saveToStorage("sec_sys_logs", data.auditLogs || []);
+    saveToStorage("sec_sys_favorites", data.favorites || []);
+
+    alert("تم استعادة البيانات بنجاح");
+  };
+
+  const resetSystem = () => {
+    if (
+      !window.confirm(
+        "تحذير: سيتم حذف كل البيانات وإعادة النظام لحالته الافتراضية، هل أنت متأكد؟"
+      )
+    ) {
+      return;
+    }
+
+    const initialUsers = [DEFAULT_ADMIN_USER];
+
+    setUsers(initialUsers);
+    setCurrentUser(null);
+    setAuditLogs([]);
+    setInmates([]);
+    setInspections([]);
+    setWards([]);
+    setCases([]);
+    setMinutes([]);
+    setWantedPersons([]);
+    setMovements([]);
+    setVisits([]);
+    setReports([]);
+    setFavorites([]);
+
+    saveToStorage("sec_sys_users_list", initialUsers);
+    saveToStorage("sec_sys_inmates", []);
+    saveToStorage("sec_sys_inspections", []);
+    saveToStorage("sec_sys_wards", []);
+    saveToStorage("sec_sys_cases", []);
+    saveToStorage("sec_sys_minutes", []);
+    saveToStorage("sec_sys_wanted", []);
+    saveToStorage("sec_sys_movements", []);
+    saveToStorage("sec_sys_visits", []);
+    saveToStorage("sec_sys_reports", []);
+    saveToStorage("sec_sys_logs", []);
+    saveToStorage("sec_sys_favorites", []);
+
+    alert("تمت إعادة تهيئة النظام. بيانات الدخول: admin / 123");
+  };
+
+  // ======================================================
+  // ✅ Dev Console – تعديل الداتا الخام من شاشة المطور
+  // ======================================================
+  const updateRawData = (key: CollectionKey, data: any[]) => {
+    switch (key) {
+      case "sec_sys_users_list":
+        setUsers(data as User[]);
+        break;
+      case "sec_sys_inmates":
+        setInmates(data as Inmate[]);
+        break;
+      case "sec_sys_inspections":
+        setInspections(data as InspectionRecord[]);
+        break;
+      case "sec_sys_wards":
+        setWards(data as Ward[]);
+        break;
+      case "sec_sys_cases":
+        setCases(data as Case[]);
+        break;
+      case "sec_sys_minutes":
+        setMinutes(data as InvestigationMinute[]);
+        break;
+      case "sec_sys_wanted":
+        setWantedPersons(data as WantedPerson[]);
+        break;
+      case "sec_sys_movements":
+        setMovements(data as Movement[]);
+        break;
+      case "sec_sys_visits":
+        setVisits(data as Visit[]);
+        break;
+      case "sec_sys_reports":
+        setReports(data as BehaviorReport[]);
+        break;
+      case "sec_sys_logs":
+        setAuditLogs(data as AuditLog[]);
+        break;
+      case "sec_sys_favorites":
+        setFavorites(data as FavoriteItem[]);
+        break;
+      default:
+        console.warn("Unknown key for updateRawData", key);
+    }
+    saveToStorage(key, data);
+  };
+
+  // ======================================================
+  // ✅ Provider
+  // ======================================================
   return (
     <SecurityContext.Provider
       value={{
@@ -278,7 +709,9 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
         movements,
         visits,
         reports,
+        auditLogs,
         favorites,
+        departments: Object.values(Department),
 
         login,
         logout,
@@ -296,9 +729,29 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
         assignWard,
         addWard,
 
+        addCase,
+        addMinute,
+
+        addWantedPerson,
+        updateWantedPersonStatus,
+        deleteWantedPerson,
+
+        addMovement,
+        updateMovement,
+
         addVisit,
         updateVisit,
         deleteVisit,
+
+        addFavorite,
+        removeFavorite,
+
+        createBackup,
+        parseBackupFile,
+        restoreData,
+        resetSystem,
+        requestPersistentStorage,
+        updateRawData,
       }}
     >
       {children}
@@ -306,4 +759,11 @@ export const SecurityProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useSecurity = () => useContext(SecurityContext);
+// ✅ hook للاستخدام
+export const useSecurity = (): SecurityContextType => {
+  const ctx = useContext(SecurityContext);
+  if (!ctx) {
+    throw new Error("useSecurity must be used within a SecurityProvider");
+  }
+  return ctx;
+};
